@@ -130,15 +130,13 @@ dataset_base = Config({
 })
 
 my_custom_dataset = dataset_base.copy({
-    'name': 'KAR 2020 DATASET',
+    'name': 'COCO 2014',
     
     'train_info': './data/coco/annotations/john_62flask_5micropipette_152020-02-18_11322020-02-18_1132.json',
     'valid_info': './data/coco/annotations/john_62flask_5micropipette_152020-02-18_11322020-02-18_1132.json',
 
-    'class_names' : KAR_CLASSES,
+    'class_names' : KAR_CLASSES
     'label_map': KAR_LABEL_MAP
-    
-})    
 
 coco2014_dataset = dataset_base.copy({
     'name': 'COCO 2014',

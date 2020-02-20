@@ -54,9 +54,44 @@ COCO_LABEL_MAP = { 1:  1,  2:  2,  3:  3,  4:  4,  5:  5,  6:  6,  7:  7,  8:  8
                   74: 65, 75: 66, 76: 67, 77: 68, 78: 69, 79: 70, 80: 71, 81: 72,
                   82: 73, 84: 74, 85: 75, 86: 76, 87: 77, 88: 78, 89: 79, 90: 80}
 
-KAR_LABEL_MAP = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10}
+KAR_CLASSES = ("black capacitor", "blue capacitor", "dynamite", "falcon tube", 
+               "flask", "graduated cylinder", "leyden lamp", "micropipette", 
+               "microscope", "nebulizer", "screwdriver", "person", "bicycle", 
+               "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", 
+               "traffic light", "fire hydrant", "stop sign", "parking meter", 
+               "bench", "bird", "cat", "dog", "horse", "sheep", "cow", "elephant", 
+               "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag",
+               "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball", 
+               "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", 
+               "tennis racket", "bottle", "wine glass", "cup", "fork", "knife", 
+               "spoon", "bowl", "banana", "apple", "sandwich", "orange", "broccoli", 
+               "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch", 
+               "potted plant", "bed", "dining table", "toilet", "tv", "laptop", 
+               "mouse", "remote", "keyboard", "cell phone", "microwave", "oven", 
+               "toaster", "sink", "refrigerator", "book", "clock", "vase", 
+               "scissors", "teddy bear", "hair drier", "toothbrush")
 
-KAR_CLASSES = ('arm', 'capacitor', 'dynamite', 'hand', 'leyden lamp', 'nebulizer', 'pipette', 'screwdriver', 'flask', 'micropipette')
+KAR_LABEL_MAP = {"0": 0, "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7,
+                 "8": 8, "9": 9, "10": 10, "11": 11, "12": 12, "13": 13, "14": 14, 
+                 "15": 15, "16": 16, "17": 17, "18": 18, "19": 19, "20": 20, 
+                 "21": 21, "22": 22, "23": 23, "24": 24, "25": 25, "26": 26, 
+                 "27": 27, "28": 28, "29": 29, "30": 30, "31": 31, "32": 32, 
+                 "33": 33, "34": 34, "35": 35, "36": 36, "37": 37, "38": 38, 
+                 "39": 39, "40": 40, "41": 41, "42": 42, "43": 43, "44": 44, 
+                 "45": 45, "46": 46, "47": 47, "48": 48, "49": 49, "50": 50, 
+                 "51": 51, "52": 52, "53": 53, "54": 54, "55": 55, "56": 56, 
+                 "57": 57, "58": 58, "59": 59, "60": 60, "61": 61, "62": 62, 
+                 "63": 63, "64": 64, "65": 65, "66": 66, "67": 67, "68": 68, 
+                 "69": 69, "70": 70, "71": 71, "72": 72, "73": 73, "74": 74, 
+                 "75": 75, "76": 76, "77": 77, "78": 78, "79": 79, "80": 80, 
+                 "81": 81, "82": 82, "83": 83, "84": 84, "85": 85, "86": 86, 
+                 "87": 87, "88": 88, "89": 89, "90": 90 }
+
+NEW_JOHN_LABEL_MAP = {"0": 0, "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, "10": 10, "11": 11, "12": 12, "13": 13, "14": 14}
+
+NEW_JOHN_CLASSES = ("arm", "bunsen burner", "capacitor", "centrifuge", "dynamite", "falcon tube", "flask", "graduated cylinder", "hand", "leyden lamp", "microscope", "nebulizer", "pipette", "screwdriver", "water bath")
+
+
 # ----------------------- CONFIG CLASS ----------------------- #
 
 class Config(object):
@@ -121,25 +156,46 @@ dataset_base = Config({
     'has_gt': True,
 
     # A list of names for each of you classes.
-    'class_names': COCO_CLASSES,
+    'class_names': NEW_JOHN_CLASSES,
 
     # COCO class ids aren't sequential, so this is a bandage fix. If your ids aren't sequential,
     # provide a map from category_id -> index in class_names + 1 (the +1 is there because it's 1-indexed).
     # If not specified, this just assumes category ids start at 1 and increase sequentially.
-    'label_map': None
+    'label_map': None,
 })
 
+# my_objects_dataset = dataset_base.copy({
+#     'name': 'My Objects',
+
+#     'train_info': './data/coco/annotations/empty_file.json',
+#     'valid_info': './data/coco/annotations/empty_file.json',
+    
+#     'label_map': COCO_LABEL_MAP+ KAR_LABEL_MAP
+
+# })
+
+my_john_dataset = dataset_base.copy({
+    'name': 'My Dataset',
+
+    'train_info': './data/coco/annotations/rectanglesinstances_train20172020-02-13_1600.json',
+    'valid_info': './data/coco/annotations/rectanglesinstances_train20172020-02-13_1600.json',
+    
+    'label_map': NEW_JOHN_LABEL_MAP
+
+})
+
+
 my_custom_dataset = dataset_base.copy({
-    'name': 'KAR 2020 DATASET',
-    
-    'train_info': './data/coco/annotations/john_62flask_5micropipette_152020-02-18_11322020-02-18_1132.json',
-    'valid_info': './data/coco/annotations/john_62flask_5micropipette_152020-02-18_11322020-02-18_1132.json',
+    'name': 'My Dataset',
 
-    'class_names' : KAR_CLASSES,
+    'train_info': './data/coco/annotations/rectanglesinstances_train20172020-02-13_1600.json',
+    'valid_info': './data/coco/annotations/rectanglesinstances_train20172020-02-13_1600.json',
+    
     'label_map': KAR_LABEL_MAP
-    
-})    
 
+})
+
+    
 coco2014_dataset = dataset_base.copy({
     'name': 'COCO 2014',
     
@@ -427,8 +483,8 @@ fpn_base = Config({
 # ----------------------- CONFIG DEFAULTS ----------------------- #
 
 coco_base_config = Config({
-    'dataset': coco2014_dataset,
-    'num_classes': 81, # This should include the background class
+    'dataset': my_john_dataset,
+    'num_classes': len(NEW_JOHN_CLASSES_CLASSES) + 1, # This should include the background class
 
     'max_iter': 400000,
 
@@ -670,7 +726,7 @@ yolact_base_config = coco_base_config.copy({
 
     # Dataset stuff
     'dataset': my_custom_dataset,
-    'num_classes': len(KAR_CLASSES) + 1,
+    'num_classes': len(coco2017_dataset.class_names) + 1,
 
     # Image Size
     'max_size': 550,

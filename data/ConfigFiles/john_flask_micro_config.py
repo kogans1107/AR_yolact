@@ -54,9 +54,12 @@ COCO_LABEL_MAP = { 1:  1,  2:  2,  3:  3,  4:  4,  5:  5,  6:  6,  7:  7,  8:  8
                   74: 65, 75: 66, 76: 67, 77: 68, 78: 69, 79: 70, 80: 71, 81: 72,
                   82: 73, 84: 74, 85: 75, 86: 76, 87: 77, 88: 78, 89: 79, 90: 80}
 
-KAR_LABEL_MAP = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10}
+FLASK_CLASS = ('arm', 'capacitor', 'dynamite', 'hand', 'leyden lamp', 'nebulizer', 
+               'pipette', 'screwdriver', 'flask', 'micropipette')
 
-KAR_CLASSES = ('arm', 'capacitor', 'dynamite', 'hand', 'leyden lamp', 'nebulizer', 'pipette', 'screwdriver', 'flask', 'micropipette')
+FLASK_MAP = {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9}
+
+
 # ----------------------- CONFIG CLASS ----------------------- #
 
 class Config(object):
@@ -121,7 +124,7 @@ dataset_base = Config({
     'has_gt': True,
 
     # A list of names for each of you classes.
-    'class_names': COCO_CLASSES,
+    'class_names': FLASK_CLASS,
 
     # COCO class ids aren't sequential, so this is a bandage fix. If your ids aren't sequential,
     # provide a map from category_id -> index in class_names + 1 (the +1 is there because it's 1-indexed).
@@ -130,15 +133,28 @@ dataset_base = Config({
 })
 
 my_custom_dataset = dataset_base.copy({
-    'name': 'KAR 2020 DATASET',
+    'name': 'CUSTOM DATASET',
     
-    'train_info': './data/coco/annotations/john_62flask_5micropipette_152020-02-18_11322020-02-18_1132.json',
-    'valid_info': './data/coco/annotations/john_62flask_5micropipette_152020-02-18_11322020-02-18_1132.json',
+    'train_info': './data/coco/annotations/john_62flask_5micropipette_152020-02-18_10062020-02-18_1006.json',
+    'valid_info': './data/coco/annotations/john_62flask_5micropipette_152020-02-18_10062020-02-18_1006.json',
+    
+    'label_map': FLASK_MAP,
 
-    'class_names' : KAR_CLASSES,
-    'label_map': KAR_LABEL_MAP
+})
+
+# pascal_sbd_dataset = dataset_base.copy({
+#     'name': 'Pascal SBD 2012',
+
+#     'train_images': './data/sbd/img',
+#     'valid_images': './data/sbd/img',
     
-})    
+#     'train_info': './data/sbd/pascal_sbd_train.json',
+#     'valid_info': './data/sbd/pascal_sbd_val.json',
+
+#     'class_names': KAR_CLASSES,
+# })
+
+
 
 coco2014_dataset = dataset_base.copy({
     'name': 'COCO 2014',
@@ -670,7 +686,7 @@ yolact_base_config = coco_base_config.copy({
 
     # Dataset stuff
     'dataset': my_custom_dataset,
-    'num_classes': len(KAR_CLASSES) + 1,
+    'num_classes': len(FLASK_CLASS) + 1,
 
     # Image Size
     'max_size': 550,
