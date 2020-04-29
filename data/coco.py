@@ -91,7 +91,9 @@ class COCODetection(data.Dataset):
             tuple: Tuple (image, (target, masks, num_crowds)).
                    target is the object returned by ``coco.loadAnns``.
         """
+        #print('index ', index)
         im, gt, masks, h, w, num_crowds = self.pull_item(index)
+        #print('gt',gt)
         return im, (gt, masks, num_crowds)
 
     def __len__(self):
@@ -106,8 +108,9 @@ class COCODetection(data.Dataset):
                    target is the object returned by ``coco.loadAnns``.
             Note that if no crowd annotations exist, crowd will be None
         """
+        
         img_id = self.ids[index]
-
+        # print(img_id)
         if self.has_gt:
             target = self.coco.imgToAnns[img_id]
             ann_ids = self.coco.getAnnIds(imgIds=img_id)
@@ -140,13 +143,14 @@ class COCODetection(data.Dataset):
 
         path = osp.join(self.root, file_name)
         assert osp.exists(path), 'Image path does not exist: {}'.format(path)
-        
+        #print(file_name)
         img = cv2.imread(path)
         height, width, _ = img.shape
         
         if len(target) > 0:
             # Pool all the masks for this image into one [num_objects,height,width] matrix
             masks = [self.coco.annToMask(obj).reshape(-1) for obj in target]
+            # print(masks)
             masks = np.vstack(masks)
             masks = masks.reshape(-1, height, width)
 
