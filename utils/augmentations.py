@@ -1,13 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Apr 26 20:28:02 2020
-
-@author: karrington
-"""
-
-
-
 import torch
 #from torchvision import transforms
 import cv2
@@ -121,7 +111,6 @@ class Pad(object):
         self.pad_gt = pad_gt
 
     def __call__(self, image, masks, boxes=None, labels=None):
-#        print('Entering Pad...')
         im_h, im_w, depth = image.shape
 
         expand_image = np.zeros(
@@ -136,8 +125,6 @@ class Pad(object):
                 dtype=masks.dtype)
             expand_masks[:,:im_h,:im_w] = masks
             masks = expand_masks
-
-#        print('Done with Pad...')
 
         return expand_image, masks, boxes, labels
 
@@ -495,6 +482,7 @@ class Shrinker(object):
             
             # F collapes the coordinates of the masked pixels around 
             #  (x0, y0), by a factor r, since r < 1. 
+            # Use F to find locations of shrunken object pixels, round to nearest.
             F = lambda r: np.asmatrix([[  r,    0,  x0*(1-r)],\
                                        [  0,    r,  y0*(1-r)],\
                                        [  0,    0,      1   ]])
@@ -503,7 +491,7 @@ class Shrinker(object):
             ymask = yy[mgtz].reshape((1,-1))
             xmask = xx[mgtz].reshape((1,-1))
             # v is a set augmented vectors, compatible with F, based
-            #   on masked pixels, i.e. concatenate the rows into columns. 
+            #   on masked pixels, i.e. concatenate the rows into columns, add 3rd row of 1's. 
             # v.shape is (3,len(mgtz))
             v = \
             np.concatenate((xmask, ymask, np.ones(ymask.shape)), axis=0)
@@ -548,12 +536,36 @@ class Shrinker(object):
             ybord = ibord % height
             
 #            scram = np.argsort(np.random.randint(0,len(ybord), size=ybord.shape))
-            pts = np.array([ybord, xbord]).T
-
-            for i,f in enumerate(interp_flist):
-                infill = (f(pts)).reshape(pts.shape[0])
-#                ishrnk[ybord[scram], xbord[scram], i] = infill
-                ishrnk[ybord, xbord, i] = infill
+#            pts = np.array([ybord, xbord]).T
+            pts3 = np.concatenate((xbord.reshape(1,-1),\
+                                   ybord.reshape(1,-1),\
+                                   np.ones(ybord.shape).reshape(1,-1)))
+            
+#------------
+            xypu = np.concatenate((xpu.reshape(1,-1), \
+                                  ypu.reshape(1,-1), \
+                                  np.ones(ypu.shape).reshape(1,-1)))
+#------------------
+            xy_fill = np.asarray((np.matmul(Finv, pts3)[0:2,:] + 0.5).astype(int))
+            fillshape = (xy_fill.shape)[1]
+            xf = xy_fill[0,:].reshape(fillshape)
+            yf = xy_fill[1,:].reshape(fillshape)
+            
+            wide = xf >= width
+            xy_fill[0, wide] = 2*width - xf[wide] - 1
+            neg = xf < 0
+            xy_fill[0, neg] = -xf[neg]
+            high = yf >= height
+            xy_fill[1, high] = 2*height - yf[high] - 1
+            low = yf < 0
+            xy_fill[1, low] = -yf[low]
+            
+            ishrnk[ybord, xbord, :] = image[xy_fill[1,:].T, xy_fill[0,:].T,:].reshape(-1,3)
+            
+#            for i,f in enumerate(interp_flist):
+#                infill = (f(pts)).reshape(pts.shape[0])
+##                ishrnk[ybord[scram], xbord[scram], i] = infill
+#                ishrnk[ybord, xbord, i] = infill
 
             b = boxes[imask]
             bv = np.asarray([[b[0], b[2]], [b[1], b[3]],[1, 1]])
