@@ -541,16 +541,13 @@ class Shrinker(object):
                                    ybord.reshape(1,-1),\
                                    np.ones(ybord.shape).reshape(1,-1)))
             
-#------------
-            xypu = np.concatenate((xpu.reshape(1,-1), \
-                                  ypu.reshape(1,-1), \
-                                  np.ones(ypu.shape).reshape(1,-1)))
-#------------------
             xy_fill = np.asarray((np.matmul(Finv, pts3)[0:2,:] + 0.5).astype(int))
             fillshape = (xy_fill.shape)[1]
             xf = xy_fill[0,:].reshape(fillshape)
             yf = xy_fill[1,:].reshape(fillshape)
-            
+            #
+            # Could maybe also forbid border fills from being inside original bounding box. 
+            #
             wide = xf >= width
             xy_fill[0, wide] = 2*width - xf[wide] - 1
             neg = xf < 0
