@@ -454,6 +454,7 @@ class Shrinker(object):
     #    WJP
         
     def __call__(self, image, masks, boxes, labels):
+#        if random.randint(2)<0:
         if random.randint(2):
             return image, masks, boxes, labels
 #        print('Always shrinking!')
@@ -474,11 +475,12 @@ class Shrinker(object):
         if n_more_than_one > 0:
             for io in ioverlap:
                 for j in range(io):
-                    if random.randint(2) < 0:
-                        use_mask[io] = False
-                    else:
-                        use_mask[j] = False
-                        
+                    if use_mask[j] and use_mask[io]:
+                        if random.randint(2):
+                            use_mask[io] = False
+                        else:
+                            use_mask[j] = False
+                            
 
         height, width, depth = image.shape
         xx, yy = np.meshgrid(np.arange(width), np.arange(height))
@@ -616,6 +618,8 @@ class Shrinker(object):
         ileave_alone = (1-allmaskcombo.reshape(mss[0], mss[1], 1))*image
         
         image = (ishrnk + ileave_alone).astype(np.float32)
+        
+#        print('Shrank', sum(use_mask),'out of',len(masks))
         
         return image, masks, boxes, labels
 
