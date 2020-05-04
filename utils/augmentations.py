@@ -12,6 +12,9 @@ from scipy.interpolate import NearestNDInterpolator
 from data import cfg, MEANS, STD
 
 
+def in_box(pts, box):
+    pass
+
 def intersect(box_a, box_b):
     max_xy = np.minimum(box_a[:, 2:], box_b[2:])
     min_xy = np.maximum(box_a[:, :2], box_b[:2])
@@ -449,32 +452,49 @@ class Expand(object):
 class Shrinker(object): 
     #  I want to zoom out some of our images so that objects appear smaller. 
     #    WJP
-
+        
     def __call__(self, image, masks, boxes, labels):
-        if random.randint(2):
+        if random.randint(2) < 0:
             return image, masks, boxes, labels
+        print('Always shrinking!')
+        
         ratio = random.uniform(0.33,0.9)
 
+
         masksum = np.zeros(masks.shape[1:])
-        for m in masks:
+        ioverlap = []
+        n_more_than_one = 0
+        for i, m in enumerate(masks):
             masksum += m
+            nmto_new = np.sum(masksum > 1)
+            if nmto_new > n_more_than_one:
+                n_more_than_one = nmto_new
+                ioverlap.append(i)
+
+        use_mask = [True] * len(masks)
+        if n_more_than_one > 0:
+            for io in ioverlap:
+                pass
 
         height, width, depth = image.shape
         xx, yy = np.meshgrid(np.arange(width), np.arange(height))
         
-        npts = height*width
-        no_obj = (masksum.reshape((npts,1)) == 0).reshape(npts,)
+#        npts = height*width
+#        no_obj = (masksum.reshape((npts,1)) == 0).reshape(npts,)
         
-        X = np.concatenate((yy.reshape((npts,1)),xx.reshape((npts,1))),axis=1)[no_obj,:]
-        interp_flist = []
-        for i in range(depth):
-            interp_flist.append(NearestNDInterpolator(X, image[:,:,i].reshape((npts,1))[no_obj]))
+#        X = np.concatenate((yy.reshape((npts,1)),xx.reshape((npts,1))),axis=1)[no_obj,:]
+#        interp_flist = []
+#        for i in range(depth):
+#            interp_flist.append(NearestNDInterpolator(X, image[:,:,i].reshape((npts,1))[no_obj]))
         
         r = ratio
         ishrnk = np.zeros(image.shape)
         newmasksum = np.zeros(masks.shape[1:])
         
         for imask, m in enumerate(masks):
+            if not use_mask[imask]:
+                continue
+            
             mgtz = m > 0
             imgtz = np.ravel(xx[mgtz]*height + yy[mgtz]).astype(int)
             
@@ -548,14 +568,23 @@ class Shrinker(object):
             #
             # Could maybe also forbid border fills from being inside original bounding box. 
             #
-            wide = xf >= width
-            xy_fill[0, wide] = 2*width - xf[wide] - 1
-            neg = xf < 0
-            xy_fill[0, neg] = -xf[neg]
-            high = yf >= height
-            xy_fill[1, high] = 2*height - yf[high] - 1
-            low = yf < 0
-            xy_fill[1, low] = -yf[low]
+            
+            all_good = False
+            foldback_reduction = 10
+            while not all_good:
+                wide = xf >= width
+                xy_fill[0, wide] = (width-1) - (xf[wide]-width)//foldback_reduction
+                
+                neg = xf < 0
+                xy_fill[0, neg] = -xf[neg]//foldback_reduction
+                
+                high = yf >= height
+                xy_fill[1, high] = (height-1) - (yf[high]-height)//foldback_reduction
+                
+                low = yf < 0
+                xy_fill[1, low] = -yf[low]//foldback_reduction
+                
+                all_good = True
             
             ishrnk[ybord, xbord, :] = image[xy_fill[1,:].T, xy_fill[0,:].T,:].reshape(-1,3)
             
@@ -577,9 +606,9 @@ class Shrinker(object):
             newmasksum += m
                     
         mss = masksum.shape        
-        allmasksum = np.asarray(masksum + newmasksum, dtype=np.float)
-        allmasksum[allmasksum > 0] = 1.0
-        ileave_alone = (1-allmasksum.reshape(mss[0], mss[1], 1))*image
+        allmaskcombo = np.asarray(masksum + newmasksum, dtype=np.float)
+        allmaskcombo[allmaskcombo > 0] = 1.0
+        ileave_alone = (1-allmaskcombo.reshape(mss[0], mss[1], 1))*image
         
         image = (ishrnk + ileave_alone).astype(np.float32)
         
