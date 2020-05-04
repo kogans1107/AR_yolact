@@ -460,7 +460,6 @@ class Shrinker(object):
         
         ratio = random.uniform(0.33,0.9)
 
-
         masksum = np.zeros(masks.shape[1:])
         ioverlap = []
         n_more_than_one = 0
@@ -474,7 +473,12 @@ class Shrinker(object):
         use_mask = [True] * len(masks)
         if n_more_than_one > 0:
             for io in ioverlap:
-                pass
+                for j in range(io):
+                    if random.randint(2) < 0:
+                        use_mask[io] = False
+                    else:
+                        use_mask[j] = False
+                        
 
         height, width, depth = image.shape
         xx, yy = np.meshgrid(np.arange(width), np.arange(height))
@@ -493,6 +497,7 @@ class Shrinker(object):
         
         for imask, m in enumerate(masks):
             if not use_mask[imask]:
+                masksum = masksum - m 
                 continue
             
             mgtz = m > 0
