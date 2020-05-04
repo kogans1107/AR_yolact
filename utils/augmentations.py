@@ -454,9 +454,9 @@ class Shrinker(object):
     #    WJP
         
     def __call__(self, image, masks, boxes, labels):
-        if random.randint(2) < 0:
+        if random.randint(2):
             return image, masks, boxes, labels
-        print('Always shrinking!')
+#        print('Always shrinking!')
         
         ratio = random.uniform(0.33,0.9)
 
