@@ -60,8 +60,11 @@ def postprocess(det_output, w, h, batch_idx=0, interpolation_mode='bilinear',
         proto_data = dets['proto']
         
         # Test flag, do not upvote
-        if cfg.mask_proto_debug:
-            np.save('scripts/proto.npy', proto_data.cpu().numpy())
+        try:
+            if cfg.mask_proto_debug:
+                np.save('scripts/proto.npy', proto_data.cpu().numpy())
+        except AttributeError:
+            pass
         
         if visualize_lincomb:
             display_lincomb(proto_data, masks)

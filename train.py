@@ -129,7 +129,7 @@ if torch.cuda.is_available():
 else:
     torch.set_default_tensor_type('torch.FloatTensor')
 
-class NetLoss(nn.Module):
+class NetWithLoss(nn.Module):
     """
     A wrapper for running the network and computing the loss
     This is so we can more efficiently use DataParallel.
@@ -225,7 +225,7 @@ def train():
             print('Error: Batch allocation (%s) does not sum to batch size (%s).' % (args.batch_alloc, args.batch_size))
             exit(-1)
 
-    net = CustomDataParallel(NetLoss(net, criterion))
+    net = CustomDataParallel(NetWithLoss(net, criterion))
     if args.cuda:
         net = net.cuda()
     
@@ -303,7 +303,7 @@ def train():
                 # Zero the grad to get ready to compute gradients
                 optimizer.zero_grad()
 
-                # Forward Pass + Compute loss at the same time (see CustomDataParallel and NetLoss)
+                # Forward Pass + Compute loss at the same time (see CustomDataParallel and NetWithLoss)
                 losses = net(datum)
                 
                 losses = { k: (v).mean() for k,v in losses.items() } # Mean here because Dataparallel
