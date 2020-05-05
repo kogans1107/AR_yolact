@@ -1,23 +1,10 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Apr 26 20:28:02 2020
-
-@author: karrington
-"""
-
-
-
 import torch
-#from torchvision import transforms
+from torchvision import transforms
 import cv2
 import numpy as np
 import types
 from numpy import random
 from math import sqrt
-import traceback
-
-from scipy.interpolate import NearestNDInterpolator
 
 from data import cfg, MEANS, STD
 
@@ -112,6 +99,7 @@ class Pad(object):
     """
     Pads the image to the input width and height, filling the
     background with mean and putting the image in the top-left.
+
     Note: this expects im_w <= width and im_h <= height
     """
     def __init__(self, width, height, mean=MEANS, pad_gt=True):
@@ -121,7 +109,6 @@ class Pad(object):
         self.pad_gt = pad_gt
 
     def __call__(self, image, masks, boxes=None, labels=None):
-#        print('Entering Pad...')
         im_h, im_w, depth = image.shape
 
         expand_image = np.zeros(
@@ -136,8 +123,6 @@ class Pad(object):
                 dtype=masks.dtype)
             expand_masks[:,:im_h,:im_w] = masks
             masks = expand_masks
-
-#        print('Done with Pad...')
 
         return expand_image, masks, boxes, labels
 
@@ -244,8 +229,6 @@ class ConvertColor(object):
         self.current = current
 
     def __call__(self, image, masks=None, boxes=None, labels=None):
-#        print('In ConvertColor, shape is', image.shape)
-#        print('and data type is',image.dtype)
         if self.current == 'BGR' and self.transform == 'HSV':
             image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
         elif self.current == 'HSV' and self.transform == 'BGR':
@@ -427,8 +410,6 @@ class Expand(object):
         self.mean = mean
 
     def __call__(self, image, masks, boxes, labels):
-#        print('Entering Expand...')
-
         if random.randint(2):
             return image, masks, boxes, labels
 
@@ -456,138 +437,17 @@ class Expand(object):
         boxes[:, :2] += (int(left), int(top))
         boxes[:, 2:] += (int(left), int(top))
 
-#        print('Doen with  Expand...')
-        return image, masks, boxes, labels
-
-class Shrinker(object): 
-    #  I want to zoom out some of our images so that objects appear smaller. 
-    #    WJP
-
-    def __call__(self, image, masks, boxes, labels):
-        if random.randint(2):
-            return image, masks, boxes, labels
-        ratio = random.uniform(0.33,0.9)
-
-        masksum = np.zeros(masks.shape[1:])
-        for m in masks:
-            masksum += m
-
-        height, width, depth = image.shape
-        xx, yy = np.meshgrid(np.arange(width), np.arange(height))
-        
-        npts = height*width
-        no_obj = (masksum.reshape((npts,1)) == 0).reshape(npts,)
-        
-        X = np.concatenate((yy.reshape((npts,1)),xx.reshape((npts,1))),axis=1)[no_obj,:]
-        interp_flist = []
-        for i in range(depth):
-            interp_flist.append(NearestNDInterpolator(X, image[:,:,i].reshape((npts,1))[no_obj]))
-        
-        r = ratio
-        ishrnk = np.zeros(image.shape)
-        newmasksum = np.zeros(masks.shape[1:])
-        
-        for imask, m in enumerate(masks):
-            mgtz = m > 0
-            imgtz = np.ravel(xx[mgtz]*height + yy[mgtz]).astype(int)
-            
-            x0, y0 = np.mean(xx[mgtz]), np.mean(yy[mgtz])
-            
-            # F collapes the coordinates of the masked pixels around 
-            #  (x0, y0), by a factor r, since r < 1. 
-            F = lambda r: np.asmatrix([[  r,    0,  x0*(1-r)],\
-                                       [  0,    r,  y0*(1-r)],\
-                                       [  0,    0,      1   ]])
-            
-            # xmask and ymask are the coordinates of masked pixels, as rows.
-            ymask = yy[mgtz].reshape((1,-1))
-            xmask = xx[mgtz].reshape((1,-1))
-            # v is a set augmented vectors, compatible with F, based
-            #   on masked pixels, i.e. concatenate the rows into columns. 
-            # v.shape is (3,len(mgtz))
-            v = \
-            np.concatenate((xmask, ymask, np.ones(ymask.shape)), axis=0)
-            xy_p = ((np.matmul(F(r),v))[0:2,:] + 0.5).astype(int)
-            # I had to use np.ravel in the following to avoid what I think 
-            #   is a bug in np.unique. It was giving me "per column" unique
-            #   values, when I had not asked for that. 
-            #
-            # One thing I learned is that xy_p is a matrix, rather than an array,
-            #   which is a distinction I am not used to drawing, and it seems
-            #   to make the difference here. 
-            #
-            iu = np.unique(np.ravel(xy_p[0,:]*height + xy_p[1,:])).astype(int)
-            # iu are the indices to the new mask pixels. 
-            xpu = (iu // height)
-            ypu = (iu % height)
-            
-            xypu = np.concatenate((xpu.reshape(1,-1), \
-                                  ypu.reshape(1,-1), \
-                                  np.ones(ypu.shape).reshape(1,-1)))
-            
-            Finv = np.linalg.inv(F(r))
-            xy_orig = np.asarray((np.matmul(Finv, xypu)[0:2,:] + 0.5).astype(int))
-            
-            ffs = (xy_orig.shape)[1]
-            x = xy_orig[0,:].reshape(ffs)
-            y = xy_orig[1,:].reshape(ffs)
-            xy_orig[0, x >= width] = width-1
-            xy_orig[0, x < 0] = 0
-            xy_orig[1, y >= height] = height-1
-            xy_orig[1, y < 0] = 0
-            
-            ishrnk[ypu, xpu,:] = image[xy_orig[1,:].T, xy_orig[0,:].T,:].reshape(-1,3)
-            #
-            # Border pixels are those that are in the old mask (imgtz) but not in the
-            #   new mask (iu). "Border" is not really the right name. They are the pixels
-            #   left vacant when the object shrinks.
-            #
-            ibordset = set(imgtz) - set(iu)
-            ibord = np.fromiter(ibordset, int, len(ibordset))
-            xbord = ibord // height
-            ybord = ibord % height
-            
-#            scram = np.argsort(np.random.randint(0,len(ybord), size=ybord.shape))
-            pts = np.array([ybord, xbord]).T
-
-            for i,f in enumerate(interp_flist):
-                infill = (f(pts)).reshape(pts.shape[0])
-#                ishrnk[ybord[scram], xbord[scram], i] = infill
-                ishrnk[ybord, xbord, i] = infill
-
-            b = boxes[imask]
-            bv = np.asarray([[b[0], b[2]], [b[1], b[3]],[1, 1]])
-            bvp = np.matmul(F(r), bv)
-            xmin, ymin, xmax, ymax = bvp[0,0], bvp[1,0], bvp[0,1], bvp[1,1] 
-            
-            boxes[imask] = np.asarray([xmin, ymin, xmax, ymax])
-
-            # Now shrink the current mask m and accumulate into newmasksum. 
-            m[:] = 0
-            m[ypu, xpu] = 1
-            newmasksum += m
-                    
-        mss = masksum.shape        
-        allmasksum = np.asarray(masksum + newmasksum, dtype=np.float)
-        allmasksum[allmasksum > 0] = 1.0
-        ileave_alone = (1-allmasksum.reshape(mss[0], mss[1], 1))*image
-        
-        image = (ishrnk + ileave_alone).astype(np.float32)
-        
         return image, masks, boxes, labels
 
 
 class RandomMirror(object):
     def __call__(self, image, masks, boxes, labels):
-#        print('Entering RandomMirror...')
         _, width, _ = image.shape
         if random.randint(2):
             image = image[:, ::-1]
             masks = masks[:, :, ::-1]
             boxes = boxes.copy()
             boxes[:, 0::2] = width - boxes[:, 2::-2]
-#        print('Done with  RandomMirror...')
-
         return image, masks, boxes, labels
 
 
@@ -707,6 +567,7 @@ class BackboneTransform(object):
     """
     Transforms a BRG image made of floats in the range [0, 255] to whatever
     input the current backbone network needs.
+
     transform is a transform config object (see config.py).
     in_channel_order is probably 'BGR' but you do you, kid.
     """
@@ -807,39 +668,21 @@ class SSDAugmentation(object):
     """ Transform to be used when training. """
 
     def __init__(self, mean=MEANS, std=STD):
-#        print('In SSDAugmentation init...')
         self.augment = Compose([
             ConvertFromInts(),
             ToAbsoluteCoords(),
             enable_if(cfg.augment_photometric_distort, PhotometricDistort()),
-            RandomMirror(),
-            RandomFlip(),
-            RandomRot90(),
+            enable_if(cfg.augment_expand, Expand(mean)),
+            enable_if(cfg.augment_random_mirror, RandomMirror()),
+            enable_if(cfg.augment_random_flip, RandomFlip()),
+            enable_if(cfg.augment_random_flip, RandomRot90()),
             Resize(),
-            Shrinker(),
             enable_if(not cfg.preserve_aspect_ratio, Pad(cfg.max_size, cfg.max_size, mean)),
             ToPercentCoords(),
             PrepareMasks(cfg.mask_size, cfg.use_gt_bboxes),
             BackboneTransform(cfg.backbone.transform, mean, std, 'BGR')
         ])
-#        print('...done with SSDAugmentation init.')
-# original code from the [] above. 
-#            ConvertFromInts(),
-#            ToAbsoluteCoords(),
-#            Shrinker(),
-#            enable_if(cfg.augment_photometric_distort, PhotometricDistort()),
-#            enable_if(cfg.augment_expand, Expand(mean)),
-#            enable_if(cfg.augment_random_sample_crop, RandomSampleCrop()),
-#            enable_if(cfg.augment_random_mirror, RandomMirror()),
-#            enable_if(cfg.augment_random_flip, RandomFlip()),
-#            enable_if(cfg.augment_random_flip, RandomRot90()),
-#            Resize(),
-#            enable_if(not cfg.preserve_aspect_ratio, Pad(cfg.max_size, cfg.max_size, mean)),
-#            ToPercentCoords(),
-#            PrepareMasks(cfg.mask_size, cfg.use_gt_bboxes),
-#            BackboneTransform(cfg.backbone.transform, mean, std, 'BGR')
-
+        #removed from below augment_expand
+            # enable_if(cfg.augment_random_sample_crop, RandomSampleCrop()),
     def __call__(self, img, masks, boxes, labels):
-#        print('Printing the traceback you wanted....')
-#        traceback.print_stack()
         return self.augment(img, masks, boxes, labels)
