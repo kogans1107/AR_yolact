@@ -20,22 +20,57 @@ from tkinter import filedialog, simpledialog
 import numpy as np
 import platform as platf
 import matplotlib.pyplot as plt
-
 import pickle
 
+import data as D  
+
+#            precision = num_true / (num_true + num_false)
+#            recall    = num_true / self.num_gt_positives
+
+def argsort(seq):
+    # http://stackoverflow.com/questions/3071415/efficient-method-to-calculate-the-rank-vector-of-a-list-in-python
+    return sorted(range(len(seq)), key=seq.__getitem__)
+
+
 def build_AP_display(apd):
-    nbins = len(apd)
     nobj = len(apd[0])
+    try:
+        label_map = D.KAR_LABEL_MAP
+        classes = D.KAR_CLASSES
+    except AttributeError:
+        label_map = D.COCO_LABEL_MAP
+        classes = D.COCO_CLASSES
+    
+    classes = list(classes)
+    
+    try:
+        assert(len(label_map)==nobj)
+    except AssertionError:
+        print('len(label map) is not equal to the number of objects')
+
+#    iou_thresholds = [x / 100 for x in range(50, 100, 5)]
+
+    nbins = len(apd)
     img_display = np.zeros((nobj, nbins))
+
+
     
     for ic, cbin in enumerate(apd):
         for iobj in range(nobj):
             img_display[iobj, ic] = apd[ic][iobj].get_ap()
-        
-    return img_display
+            
+    
+    obj_score = np.mean(img_display,axis=1)
+    iord = np.argsort(obj_score)
+    
+    worst_first_objs = [classes[i] for i in iord]
+    worst_first_image = img_display[iord,:]
+
+    
+    return worst_first_image, worst_first_objs
 
 if __name__=='__main__':
-    from eval import APDataObject
+    from eval import APDataObject  # need this defined so ap_data can be loaded. 
 
     root = tk.Tk() 
     top = tk.Toplevel(root)
@@ -44,11 +79,7 @@ if __name__=='__main__':
     ap_file =  \
             filedialog.askopenfilename(parent=top, \
                                         title='Choose AP results file')
-            
-    label_file = \
-            filedialog.askopenfilename(parent=top, \
-                                        title='Choose labels file')
-    
+
     try:        
         with open(ap_file,'rb') as f:
             ap = pickle.load(f)
