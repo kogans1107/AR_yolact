@@ -40,8 +40,11 @@ def str2bool(v):
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(
         description='YOLACT COCO Evaluation')
+#    parser.add_argument('--trained_model',
+#                        default='weights/ssd300_mAP_77.43_v2.pth', type=str,
+#                        help='Trained state_dict file path to open. If "interrupt", this will open the interrupt file.')
     parser.add_argument('--trained_model',
-                        default='weights/ssd300_mAP_77.43_v2.pth', type=str,
+                        default='weights/yolact_resnet50_54_800000.pth', type=str,
                         help='Trained state_dict file path to open. If "interrupt", this will open the interrupt file.')
     parser.add_argument('--top_k', default=5, type=int,
                         help='Further restrict the number of predictions to parse')
@@ -1014,6 +1017,11 @@ def evaluate(net:Yolact, dataset, train_mode=False):
 def calc_map(ap_data):
     print('Calculating mAP...')
     aps = [{'box': [], 'mask': []} for _ in iou_thresholds]
+    
+#    with open('ap_data_dump','wb') as f:
+#        pickle.dump(ap_data,f)
+#        print('Wrote ap_data_dump.')
+
 
     for _class in range(len(cfg.dataset.class_names)):
         for iou_idx in range(len(iou_thresholds)):
