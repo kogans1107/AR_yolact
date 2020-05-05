@@ -1023,6 +1023,11 @@ def calc_map(ap_data):
 #        print('Wrote ap_data_dump.')
 
 
+    #code addingin by Bill to get the per object mAP scores
+    with open('ap_data_dump','wb') as f:
+        pickle.dump(ap_data,f)
+        print('Wrote ap_data_dump.')
+        
     for _class in range(len(cfg.dataset.class_names)):
         for iou_idx in range(len(iou_thresholds)):
             for iou_type in ('box', 'mask'):
