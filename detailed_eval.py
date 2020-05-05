@@ -47,6 +47,10 @@ def build_AP_display(apd):
         assert(len(label_map)==nobj)
     except AssertionError:
         print('len(label map) is not equal to the number of objects')
+        if len(classes) < nobj:
+            delt = nobj - len(classes)
+            for i in range(delt):
+                classes.append('crap')
 
 #    iou_thresholds = [x / 100 for x in range(50, 100, 5)]
 
@@ -85,6 +89,14 @@ if __name__=='__main__':
             ap = pickle.load(f)
     except:
         print('Trouble opening weights file.')
-        
+    
+    # KTO For today just F9 one or both of these. They will give you a per-object display
+    #   of scores, and a corresponding (by rows) list of classes. They are both sorted from 
+    #   worst to best. The important thing is to know which objects are the worst. 
+    #
+#    img, names = build_AP_display(ap['boxes'])
+    img, names = build_AP_display(ap['mask'])
+    
+
     
     
