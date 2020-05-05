@@ -26,6 +26,24 @@ import data as D
 
 #            precision = num_true / (num_true + num_false)
 #            recall    = num_true / self.num_gt_positives
+#
+#    Is IoU a way to get precision? Precision answers "what fraction of the positives
+#   are true positives? 
+#
+#   Recall answers "what fraction of the ground truth positives are recorded as 
+#     positives?" 
+#
+#   Precision answers a question about all the pixels for which YOLACT said "I see 
+#     something here."  It is the fraction of those that are correct. 
+# 
+#   Recall answers a question about the ground truth positive pixels. It is 
+#    the fraction of those that YOLACT called posiitve. 
+# 
+#   Intersection over union is true positives over all positives. So it is 
+#      exactly precision. 
+
+
+
 
 def argsort(seq):
     # http://stackoverflow.com/questions/3071415/efficient-method-to-calculate-the-rank-vector-of-a-list-in-python
@@ -40,13 +58,29 @@ def build_AP_display(apd):
     except AttributeError:
         label_map = D.COCO_LABEL_MAP
         classes = D.COCO_CLASSES
+        
+#    THIS IS MY CLASS LIST FOR DEBUGGING WHEN I HAD THE WRONG CONFIG FILE 
+#    classes = \
+#    ['Cooling Block', 'Ice Bucket', 'N3 (Dark Green Bee)', 'RP (Orange Smile)', \
+#     'Sterile 1.5ml Tube', 'Taqpath (Yellow Star)', 'Trash', '1.5-2ml Rack',\
+#     '15ml Capped Tube', '15ml Tube Rack', 'N1 (Red Good)', 'N2 (Dark Blue Bee)',\
+#     'Nuclease Free Water', 'PCR Plate', 'Spin Column', 'Bunsen Burner', 'Thumb', \
+#     'Fingers', 'GeneDrive', 'Hand', 'Laptop', 'Micropipette', 'Tip Box', 'PCR Machine',\
+#     'RT-PCR (Red Ladybug)', 'Vortex', '1.5ml Tube (Pink Flower)', '2ml Tube (Blue Smile)',\
+#     'RPE Buffer (Blue)', 'RWI Buffer (Green)', 'RNase Water (Orange)', 'RLT Buffer (Pink)',\
+#     'Opaque Rack Cover', 'nCOVPC (Green Flower)', 'Gloves',\
+#     'Micropipette (Nucleic Acid Yellow)', 'Micropipette (Reagant Orange)',\
+#     'Tip Box (Reagant Orange)', 'Tip Box (Nucleic Acid Yellow)', 'Striker Flint',\
+#     'Micropipette Tip', 'Microcentrifuge', 'Serological Pipette', 'Electronic Pipet-Aid',\
+#     'VWR Marker', 'Micropipette Tippy End', 'Nucleic Acid Decontaminant']
     
     classes = list(classes)
     
     try:
-        assert(len(label_map)==nobj)
+        assert(len(classes)==nobj)
     except AssertionError:
-        print('len(label map) is not equal to the number of objects')
+        print('len(classes) is not equal to the number of objects')
+        print(len(classes),nobj)
         if len(classes) < nobj:
             delt = nobj - len(classes)
             for i in range(delt):
@@ -97,6 +131,13 @@ if __name__=='__main__':
 #    img, names = build_AP_display(ap['boxes'])
     img, names = build_AP_display(ap['mask'])
     
-
-    
+    for i,n in enumerate(names):
+#        print(n, '\t\t\t\t\t', np.mean(img[i,:]))
+        tabslist = ['\t']*((48-len(n))//8)
+        tabs=''
+        for t in tabslist:
+            tabs = tabs + t
+            
+        print((n + tabs + '{:5.3f}').format( np.mean(img[i,:])))
+        
     
