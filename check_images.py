@@ -200,8 +200,8 @@ class ImageChecker(tk.Frame):
                             self.ax.plot([x0, x0+w, x0+w, x0,   x0],\
                                          [y0, y0,   y0+h, y0+h, y0])
                             self.ax.set_title(file_name)
-                            self.ax.text(x0+w/2, y0+h/2, labeltext, \
-                             horizontalalignment='center', verticalalignment='center',\
+                            self.ax.text(x0, y0, labeltext, \
+                             horizontalalignment='left', verticalalignment='bottom',\
                              color='black', bbox=dict(facecolor='yellow', alpha=0.5))
                         except Exception as exc:
                             print(traceback.format_exc())
@@ -211,10 +211,9 @@ class ImageChecker(tk.Frame):
                     self.canvas.draw()
                     break
 
-                except FileNotFoundError:
-                    pass
-                    print('oops file does not seem to exist...')
-                 
+                except (FileNotFoundError, AssertionError):
+                    print(file_name)
+                    
             except StopIteration:
                 print('No more files! You have seen them all...')
                 self.byebye(None)

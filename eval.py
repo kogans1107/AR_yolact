@@ -247,11 +247,19 @@ def prep_display(dets_out, img, h, w, undo_transform=True, class_color=False, ma
                 text_str = '%s: %.2f' % (_class, score) if args.display_scores else _class
 
                 font_face = cv2.FONT_HERSHEY_DUPLEX
-                font_scale = 0.6
+                font_scale = 1.0
                 font_thickness = 1
 
                 text_w, text_h = cv2.getTextSize(text_str, font_face, font_scale, font_thickness)[0]
-
+                
+                height,width,depth = img_numpy.shape
+                
+                if x1 + text_w > width:
+                    x1 = width - text_w
+                    
+                if y1 + text_h > height:
+                    y1 = height - text_h
+                    
                 text_pt = (x1, y1 - 3)
                 text_color = [255, 255, 255]
 
