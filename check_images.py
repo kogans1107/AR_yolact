@@ -24,7 +24,6 @@ import data as D
   
 from utils.augmentations import SSDAugmentation #, FastBaseTransform, BaseTransform
 
-import tkinter as tk
 import os
 import time
 from pathlib import Path
