@@ -53,8 +53,8 @@ def argsort(seq):
 def build_AP_display(apd):
     nobj = len(apd[0])
     try:
-        label_map = D.KAR_LABEL_MAP
-        classes = D.KAR_CLASSES
+        label_map = D.YOLAB_LABEL_MAP
+        classes = D.YOLAB_CLASSES
     except AttributeError:
         label_map = D.COCO_LABEL_MAP
         classes = D.COCO_CLASSES
