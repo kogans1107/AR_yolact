@@ -482,14 +482,27 @@ def compute_validation_loss(net, data_loader, criterion):
         loss_labels = sum([[k, losses[k]] for k in loss_types if k in losses], [])
         print(('Validation ||' + (' %s: %.3f |' * len(losses)) + ')') % tuple(loss_labels), flush=True)
 
+
+
 def compute_validation_map(epoch, iteration, yolact_net, dataset, log:Log=None):
+    def date_for_filename():
+        tgt = time.localtime()
+        year = str(tgt.tm_year)
+        mon = "{:02}".format(tgt.tm_mon)
+        day = "{:02}".format(tgt.tm_mday)
+        hour = "{:02}".format(tgt.tm_hour)
+        minute = "{:02}".format(tgt.tm_min)
+        datestr = year + '-' + mon + '-' + day + '_' + hour + minute
+        return datestr
+    
     with torch.no_grad():
         yolact_net.eval()
         
         start = time.time()
         print()
         print("Computing validation mAP (this may take a while)...", flush=True)
-        val_info = eval_script.evaluate(yolact_net, dataset, train_mode=True)
+        ap_filename = 'ap_data_' + str(epoch) + str(iteration) + '_' + date_for_filename()
+        val_info = eval_script.evaluate(yolact_net, dataset, train_mode=True, per_obj_data= ap_filename)
         end = time.time()
 
         if log is not None:
