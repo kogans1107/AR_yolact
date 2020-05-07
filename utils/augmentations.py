@@ -631,9 +631,12 @@ class RandomBackground(object):
         self.imgfiles = glob.glob(non_iconic_path+'*.jpg')
 
     def __call__(self, image, masks, boxes, labels):
+        if random.randint(2):
+            return image, masks, boxes, labels
+         
         bkgfile = self.imgfiles[np.random.randint(0,len(self.imgfiles))]
         
-        bkg = imageio.imread(bkgfile)
+        bkg = cv2.cvtColor(imageio.imread(bkgfile), cv2.COLOR_RGB2BGR)
         
         mshape = masks[0].shape
         masksum = np.zeros(mshape)
@@ -644,6 +647,10 @@ class RandomBackground(object):
         objects = image * masksum
         bkg = bkg * (1-masksum)
         non_icon_image = objects + bkg
+        
+        print('image',np.min(image), np.max(image))
+        print('bkg',np.min(bkg), np.max(bkg))
+        print('non_icon_image',np.min(non_icon_image), np.max(non_icon_image))
         
         return non_icon_image, masks, boxes, labels
 
