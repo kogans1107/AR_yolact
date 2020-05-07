@@ -6,6 +6,7 @@ import types
 from numpy import random
 from math import sqrt
 import traceback
+import imageio
 
 from scipy.interpolate import NearestNDInterpolator
 
@@ -455,9 +456,9 @@ class Shrinker(object):
         
     def __call__(self, image, masks, boxes, labels):
 #        if random.randint(2)<0:
-        if random.randint(2):
+        if random.randint(2) < 0:
             return image, masks, boxes, labels
-#        print('Always shrinking!')
+        print('Always shrinking!')
         
         ratio = random.uniform(0.33,0.9)
 
@@ -622,6 +623,29 @@ class Shrinker(object):
 #        print('Shrank', sum(use_mask),'out of',len(masks))
         
         return image, masks, boxes, labels
+
+class RandomBackground(object):
+    def __init__(self):
+        import glob
+        non_iconic_path = './data/non_iconic/'
+        self.imgfiles = glob.glob(non_iconic_path+'*.jpg')
+
+    def __call__(self, image, masks, boxes, labels):
+        bkgfile = self.imgfiles[np.random.randint(0,len(self.imgfiles))]
+        
+        bkg = imageio.imread(bkgfile)
+        
+        mshape = masks[0].shape
+        masksum = np.zeros(mshape)
+        for m in masks:
+            masksum += m
+        masksum[masksum > 0] = 1.0
+        masksum = np.reshape(masksum, (mshape[0], mshape[1],1))
+        objects = image * masksum
+        bkg = bkg * (1-masksum)
+        non_icon_image = objects + bkg
+        
+        return non_icon_image, masks, boxes, labels
 
 
 class RandomMirror(object):
@@ -864,6 +888,7 @@ class SSDAugmentation(object):
             RandomRot90(),
             Resize(),
             Shrinker(),
+            RandomBackground(),
             enable_if(not cfg.preserve_aspect_ratio, Pad(cfg.max_size, cfg.max_size, mean)),
             ToPercentCoords(),
             PrepareMasks(cfg.mask_size, cfg.use_gt_bboxes),
