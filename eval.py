@@ -998,8 +998,8 @@ def evaluate(net:Yolact, dataset, train_mode=False, per_obj_data= None):
                 else:
                     detections.dump()
             else:
-                if not (train_mode and False):
-                    print('Saving data...')
+                if (not train_mode) or True: # Now we make this happen always--
+                    print('Saving data...')  #     old condition in parentheses
                     with open(args.ap_data_file, 'wb') as f:
                         pickle.dump(ap_data, f)
 
@@ -1019,17 +1019,7 @@ def evaluate(net:Yolact, dataset, train_mode=False, per_obj_data= None):
 def calc_map(ap_data):
     print('Calculating mAP...')
     aps = [{'box': [], 'mask': []} for _ in iou_thresholds]
-    
-#    with open('ap_data_dump','wb') as f:
-#        pickle.dump(ap_data,f)
-#        print('Wrote ap_data_dump.')
-
-
-    #code addingin by Bill to get the per object mAP scores
-    with open('ap_data_dump','wb') as f:
-        pickle.dump(ap_data,f)
-        print('Wrote ap_data_dump.')
-        
+         
     for _class in range(len(cfg.dataset.class_names)):
         for iou_idx in range(len(iou_thresholds)):
             for iou_type in ('box', 'mask'):
