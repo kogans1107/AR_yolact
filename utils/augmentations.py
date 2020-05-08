@@ -456,9 +456,8 @@ class Shrinker(object):
         
     def __call__(self, image, masks, boxes, labels):
 #        if random.randint(2)<0:
-        if random.randint(2) < 0:
+        if random.randint(2):
             return image, masks, boxes, labels
-        print('Always shrinking!')
         
         ratio = random.uniform(0.33,0.9)
 
@@ -471,7 +470,9 @@ class Shrinker(object):
             if nmto_new > n_more_than_one:
                 n_more_than_one = nmto_new
                 ioverlap.append(i)
-
+        #
+        #   Check all the masks that have overlap, and drop some of them until 
+        #       no masks have overlap. 
         use_mask = [True] * len(masks)
         if n_more_than_one > 0:
             for io in ioverlap:
@@ -485,15 +486,7 @@ class Shrinker(object):
 
         height, width, depth = image.shape
         xx, yy = np.meshgrid(np.arange(width), np.arange(height))
-        
-#        npts = height*width
-#        no_obj = (masksum.reshape((npts,1)) == 0).reshape(npts,)
-        
-#        X = np.concatenate((yy.reshape((npts,1)),xx.reshape((npts,1))),axis=1)[no_obj,:]
-#        interp_flist = []
-#        for i in range(depth):
-#            interp_flist.append(NearestNDInterpolator(X, image[:,:,i].reshape((npts,1))[no_obj]))
-        
+                
         r = ratio
         ishrnk = np.zeros(image.shape)
         newmasksum = np.zeros(masks.shape[1:])
@@ -501,7 +494,7 @@ class Shrinker(object):
         for imask, m in enumerate(masks):
             if not use_mask[imask]:
                 masksum = masksum - m 
-                continue
+                continue    # skip everything for all but one of each crowd
             
             mgtz = m > 0
             imgtz = np.ravel(xx[mgtz]*height + yy[mgtz]).astype(int)
@@ -563,8 +556,6 @@ class Shrinker(object):
             xbord = ibord // height
             ybord = ibord % height
             
-#            scram = np.argsort(np.random.randint(0,len(ybord), size=ybord.shape))
-#            pts = np.array([ybord, xbord]).T
             pts3 = np.concatenate((xbord.reshape(1,-1),\
                                    ybord.reshape(1,-1),\
                                    np.ones(ybord.shape).reshape(1,-1)))
@@ -573,9 +564,6 @@ class Shrinker(object):
             fillshape = (xy_fill.shape)[1]
             xf = xy_fill[0,:].reshape(fillshape)
             yf = xy_fill[1,:].reshape(fillshape)
-            #
-            # Could maybe also forbid border fills from being inside original bounding box. 
-            #
             
             all_good = False
             foldback_reduction = 10
@@ -592,15 +580,10 @@ class Shrinker(object):
                 low = yf < 0
                 xy_fill[1, low] = -yf[low]//foldback_reduction
                 
-                all_good = True
+                all_good = True  # just do it once for now
             
             ishrnk[ybord, xbord, :] = image[xy_fill[1,:].T, xy_fill[0,:].T,:].reshape(-1,3)
             
-#            for i,f in enumerate(interp_flist):
-#                infill = (f(pts)).reshape(pts.shape[0])
-##                ishrnk[ybord[scram], xbord[scram], i] = infill
-#                ishrnk[ybord, xbord, i] = infill
-
             b = boxes[imask]
             bv = np.asarray([[b[0], b[2]], [b[1], b[3]],[1, 1]])
             bvp = np.matmul(F(r), bv)
@@ -619,23 +602,24 @@ class Shrinker(object):
         ileave_alone = (1-allmaskcombo.reshape(mss[0], mss[1], 1))*image
         
         image = (ishrnk + ileave_alone).astype(np.float32)
-        
-#        print('Shrank', sum(use_mask),'out of',len(masks))
-        
+                
         return image, masks, boxes, labels
 
-class RandomBackground(object):
+class PhotoBomb(object):
+    """ 
+    Take objects out of their lab bench context and drop them into random scenes
+    """
     def __init__(self):
         import glob
         non_iconic_path = './data/non_iconic/'
         self.imgfiles = glob.glob(non_iconic_path+'*.jpg')
+        self.once_every = 8 # On average, this is invoked once every once_every images.
 
     def __call__(self, image, masks, boxes, labels):
-        if random.randint(2):
+        if random.randint(self.once_every):
             return image, masks, boxes, labels
          
         bkgfile = self.imgfiles[np.random.randint(0,len(self.imgfiles))]
-        
         bkg = cv2.cvtColor(imageio.imread(bkgfile), cv2.COLOR_RGB2BGR)
         
         mshape = masks[0].shape
@@ -648,9 +632,9 @@ class RandomBackground(object):
         bkg = bkg * (1-masksum)
         non_icon_image = objects + bkg
         
-        print('image',np.min(image), np.max(image))
-        print('bkg',np.min(bkg), np.max(bkg))
-        print('non_icon_image',np.min(non_icon_image), np.max(non_icon_image))
+#        print('image',np.min(image), np.max(image))
+#        print('bkg',np.min(bkg), np.max(bkg))
+#        print('non_icon_image',np.min(non_icon_image), np.max(non_icon_image))
         
         return non_icon_image, masks, boxes, labels
 
@@ -895,7 +879,7 @@ class SSDAugmentation(object):
             RandomRot90(),
             Resize(),
             Shrinker(),
-            RandomBackground(),
+            PhotoBomb(),
             enable_if(not cfg.preserve_aspect_ratio, Pad(cfg.max_size, cfg.max_size, mean)),
             ToPercentCoords(),
             PrepareMasks(cfg.mask_size, cfg.use_gt_bboxes),

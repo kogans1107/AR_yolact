@@ -212,6 +212,8 @@ class ImageChecker(tk.Frame):
 
                 except (FileNotFoundError, AssertionError):
                     print(file_name)
+                else:
+                    print('new error!')
                     
             except StopIteration:
                 print('No more files! You have seen them all...')
