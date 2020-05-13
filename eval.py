@@ -394,7 +394,11 @@ def _bbox_iou(bbox1, bbox2, iscrowd=False):
     return ret.cpu()
 
 def prep_metrics(ap_data, dets, img, gt, gt_masks, h, w, num_crowd, image_id, detections:Detections=None):
-    """ Returns a list of APs for this image, with each element being for a class  """
+    """ 
+    Returns a list of APs for this image, with each element being for a class 
+    NO!!! This does not seem to return anything. Nor can I find global variables that it acts on. 
+    WHAT EFFECT DOES IT HAVE? Oh, my bad, it must be returning stuff through the parameters. Ugh. 
+    """
     if not args.output_coco_json:
         with timer.env('Prepare gt'):
             gt_boxes = torch.Tensor(gt[:, :4])
@@ -466,7 +470,7 @@ def prep_metrics(ap_data, dets, img, gt, gt_masks, h, w, num_crowd, image_id, de
 
     timer.start('Main loop')
     for _class in set(classes + gt_classes):
-        ap_per_iou = []
+#        ap_per_iou = []
         num_gt_for_class = sum([1 for x in gt_classes if x == _class])
         
         for iouIdx in range(len(iou_thresholds)):
@@ -526,7 +530,8 @@ class APDataObject:
     Note: I type annotated this because why not.
     """
 
-    def __init__(self):
+    def __init__(self, cname = None):
+        self.classname = cname
         self.data_points = []
         self.num_gt_positives = 0
 
@@ -915,8 +920,8 @@ def evaluate(net:Yolact, dataset, train_mode=False, per_obj_data= None):
         # For each class and iou, stores tuples (score, isPositive)
         # Index ap_data[type][iouIdx][classIdx]
         ap_data = {
-            'box' : [[APDataObject() for _ in cfg.dataset.class_names] for _ in iou_thresholds],
-            'mask': [[APDataObject() for _ in cfg.dataset.class_names] for _ in iou_thresholds]
+            'box' : [[APDataObject(cname) for cname in cfg.dataset.class_names] for _ in iou_thresholds],
+            'mask': [[APDataObject(cname) for cname in cfg.dataset.class_names] for _ in iou_thresholds]
         }
         detections = Detections()
     else:
@@ -1071,6 +1076,7 @@ if __name__ == '__main__':
         args.trained_model = SavePath.get_latest('weights/', cfg.name)
 
     if args.config is None:
+        print('args.trained_model is', args.trained_model)
         model_path = SavePath.from_str(args.trained_model)
         # TODO: Bad practice? Probably want to do a name lookup instead.
         args.config = model_path.model_name + '_config'
@@ -1106,7 +1112,7 @@ if __name__ == '__main__':
         else:
             dataset = None        
 
-        print('Loading model...', end='')
+        print('Loading model...'+args.trained_model, end='')
         net = Yolact()
         net.load_weights(args.trained_model)
         net.eval()
