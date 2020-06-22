@@ -117,8 +117,8 @@ class ImageChecker(tk.Frame):
         matplotlib.use('Qt5Agg')
 
         try:
-            self.label_map = D.KAR_LABEL_MAP
-            self.classes = D.KAR_CLASSES
+            self.label_map = D.YOLAB_LABEL_MAP
+            self.classes = D.YOLAB_CLASSES
         except AttributeError:
             self.label_map = D.COCO_LABEL_MAP
             self.classes = D.COCO_CLASSES
