@@ -197,7 +197,8 @@ class PredictionModule(nn.Module):
                     mask = mask * torch.sigmoid(gate)
 
         if cfg.mask_proto_split_prototypes_by_head and cfg.mask_type == mask_type.lincomb:
-            mask = F.pad(mask, (self.index * self.mask_dim, (self.num_heads - self.index - 1) * self.mask_dim), mode='constant', value=0)
+            mask = F.pad(mask, (self.index * self.mask_dim, (self.num_heads - self.index - 1) * self.mask_dim),\
+                         mode='constant', value=0)
         
         priors = self.make_priors(conv_h, conv_w, x.device)
 
@@ -623,7 +624,8 @@ class Yolact(nn.Module):
 
                 if cfg.mask_type == mask_type.lincomb and cfg.mask_proto_prototypes_as_features:
                     # Scale the prototypes down to the current prediction layer's size and add it as inputs
-                    proto_downsampled = F.interpolate(proto_downsampled, size=outs[idx].size()[2:], mode='bilinear', align_corners=False)
+                    proto_downsampled = F.interpolate(proto_downsampled, size=outs[idx].size()[2:], \
+                                                      mode='bilinear', align_corners=False)
                     pred_x = torch.cat([pred_x, proto_downsampled], dim=1)
 
                 # A hack for the way dataparallel works
@@ -676,7 +678,16 @@ class Yolact(nn.Module):
                         * F.softmax(pred_outs['conf'][:, :, 1:], dim=-1)
                     
                 else:
-                    pred_outs['conf'] = F.softmax(pred_outs['conf'], -1)
+                    smpoc = F.softmax(pred_outs['conf'], -1)
+#                    for i in range(smpoc.size()[1]):
+#                        if torch.argmax(smpoc[0,i,:]) > 0:
+#                            print('i is', i)
+#                            import matplotlib
+#                            import matplotlib.pyplot as plt
+#                            matplotlib.use('Qt5Agg')
+#                            plt.plot(smpoc[0,i,:].cpu())
+#                            pass
+                    pred_outs['conf'] = smpoc
 
             return self.detect(pred_outs, self)
 

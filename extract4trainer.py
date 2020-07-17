@@ -13,6 +13,7 @@ from train import  NetWithLoss, CustomDataParallel, MultiBoxLoss, prepare_data
 import data as D  
 
 from utils.augmentations import SSDAugmentation, FastBaseTransform #, BaseTransform
+from utils.functions import SavePath
 import torch
 from yolact import Yolact
 #from eval import prep_display # oops no, clone and modify here as local_prep_display
@@ -324,7 +325,15 @@ if __name__ == '__main__':
     if mode == 'eval':
         print('Testing net and preds...')
     
-    
+#        trained_model = 'weights/yolact_resnet50_54_800000.pth'
+#        model_path = SavePath.from_str(trained_model)
+#        force_config = model_path.model_name + '_config'
+#        print(force_config)
+#        D.set_cfg(force_config)
+#
+#    
+#    
+#    D.set_cfg('yolact_resnet50_config') # what a fooking mess
     
     backend_I_want = 'Qt5Agg'
     #
@@ -386,8 +395,14 @@ if __name__ == '__main__':
     #   function, and use it to process datum. 
     #
     net = Yolact()
-    net.init_weights(backbone_path='weights/' + D.cfg.backbone.path)
+#    net.init_weights(backbone_path='weights/' + D.cfg.backbone.path)
+    print('loading weights/yolact_resnet50_54_800000.pth...')
+    net.load_weights('weights\\yolact_resnet50_54_800000.pth')
+    
+    
 #    net.eval()
+    
+    #D.yolact_resnet50_config how do I load this? 
     
     net.detect.use_fast_nms = True
     net.detect.use_cross_class_nms = False
@@ -405,10 +420,11 @@ if __name__ == '__main__':
         
             img, gt, gt_masks, h, w, num_crowd = dataset.pull_item(i_img)
             batch = img.unsqueeze(0).cuda()
+            print(type(batch), batch.size())
             preds = net(batch)
             img_numpy = local_prep_display(preds, img, h, w)
             plt.imshow(img_numpy)
-            plt.pause(0.1)
+            plt.pause(0.5)
     
 
 #-----------------------

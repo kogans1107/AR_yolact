@@ -122,7 +122,7 @@ if __name__=='__main__':
         with open(ap_file,'rb') as f:
             ap = pickle.load(f)
     except:
-        print('Trouble opening weights file.')
+        print('Trouble opening AP results file.')
     
     # KTO For today just F9 one or both of these. They will give you a per-object display
     #   of scores, and a corresponding (by rows) list of classes. They are both sorted from 
@@ -133,7 +133,7 @@ if __name__=='__main__':
     
     for i,n in enumerate(names):
 #        print(n, '\t\t\t\t\t', np.mean(img[i,:]))
-        tabslist = ['\t']*((48-len(n))//8)
+        tabslist = ['\t']*((48-len(n))//8)  # failed attempt at fancy tabbing
         tabs=''
         for t in tabslist:
             tabs = tabs + t

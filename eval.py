@@ -382,8 +382,8 @@ class Detections:
         
 
         
-
-def _mask_iou(mask1, mask2, iscrowd=False):
+#    v----LOOK there's an underscore in front of this...it's  "_mask_iou". 
+def _mask_iou(mask1, mask2, iscrowd=False): 
     with timer.env('Mask IoU'):
         ret = mask_iou(mask1, mask2, iscrowd)
     return ret.cpu()
@@ -398,6 +398,11 @@ def prep_metrics(ap_data, dets, img, gt, gt_masks, h, w, num_crowd, image_id, de
     Returns a list of APs for this image, with each element being for a class 
     NO!!! This does not seem to return anything. Nor can I find global variables that it acts on. 
     WHAT EFFECT DOES IT HAVE? Oh, my bad, it must be returning stuff through the parameters. Ugh. 
+    
+ap_data and detections get filled inside this "module" which is not a module at all since 
+it is hooked up to the outside in at least two easy-to-forget ways. Rant over. 
+
+dets is the output from Yolact() I believe. 
     """
     if not args.output_coco_json:
         with timer.env('Prepare gt'):
@@ -446,7 +451,7 @@ def prep_metrics(ap_data, dets, img, gt, gt_masks, h, w, num_crowd, image_id, de
         num_pred = len(classes)
         num_gt   = len(gt_classes)
 
-        mask_iou_cache = _mask_iou(masks, gt_masks)
+        mask_iou_cache = _mask_iou(masks, gt_masks) # NOTE: names begin with underscores 
         bbox_iou_cache = _bbox_iou(boxes.float(), gt_boxes.float())
 
         if num_crowd > 0:
@@ -469,8 +474,7 @@ def prep_metrics(ap_data, dets, img, gt, gt_masks, h, w, num_crowd, image_id, de
         ]
 
     timer.start('Main loop')
-    for _class in set(classes + gt_classes):
-#        ap_per_iou = []
+    for _class in set(classes + gt_classes): # includes true and false positives
         num_gt_for_class = sum([1 for x in gt_classes if x == _class])
         
         for iouIdx in range(len(iou_thresholds)):
@@ -478,21 +482,24 @@ def prep_metrics(ap_data, dets, img, gt, gt_masks, h, w, num_crowd, image_id, de
 
             for iou_type, iou_func, crowd_func, score_func, indices in iou_types:
                 gt_used = [False] * len(gt_classes)
-                
+                """              box/mask | 1:10  |  1:80 (for COCO) """
                 ap_obj = ap_data[iou_type][iouIdx][_class]
                 ap_obj.add_gt_positives(num_gt_for_class)
 
-                for i in indices:
-                    if classes[i] != _class:
-                        continue
-                    
+                for i in indices:  # indices correspond to number of dets. 
+                    if classes[i] != _class:    
+                        continue              # if the detected class i is not one of
+                                              #   the one being examined now, 
+                                              #   skip the rest of this indices loop
+                
                     max_iou_found = iou_threshold
                     max_match_idx = -1
                     for j in range(num_gt):
                         if gt_used[j] or gt_classes[j] != _class:
                             continue
                             
-                        iou = iou_func(i, j)
+                        iou = iou_func(i, j) # <---this is where Recall binning comes from. 
+                                             #   It has to be large enough to get included. 
 
                         if iou > max_iou_found:
                             max_iou_found = iou
@@ -971,13 +978,17 @@ def evaluate(net:Yolact, dataset, train_mode=False, per_obj_data= None):
             elif args.benchmark:
                 prep_benchmark(preds, h, w)
             else:
-                prep_metrics(ap_data, preds, img, gt, gt_masks, h, w, num_crowd, dataset.ids[image_idx], detections)
+                prep_metrics(ap_data, preds, img, gt, gt_masks, h, w,\
+                             num_crowd, dataset.ids[image_idx], detections)
             
             # First couple of images take longer because we're constructing the graph.
             # Since that's technically initialization, don't include those in the FPS calculations.
             if it > 1:
                 frame_times.add(timer.total_time())
-            
+#            else:
+#                print(ap_data['box'][0][0].data_points)
+#                print(ap_data['mask'][0][0].data_points)
+                
             if args.display:
                 if it > 1:
                     print('Avg FPS: %.4f' % (1 / frame_times.get_avg()))
@@ -1023,6 +1034,13 @@ def evaluate(net:Yolact, dataset, train_mode=False, per_obj_data= None):
 
 def calc_map(ap_data):
     print('Calculating mAP...')
+    # Ok, so the next line makes a list of dictionaries in which each item is an 
+    #  empty list.  There is one such dictionary for each iou_threshold. 
+    #
+    #  How do we select which detections contribute to each of the iou_threshold bins? 
+    #  Do incorrectly labeled detections contribute? From the structure of this loop
+    #   it seems like this binning has already occurred in forming ap_data. 
+    #
     aps = [{'box': [], 'mask': []} for _ in iou_thresholds]
          
     for _class in range(len(cfg.dataset.class_names)):
