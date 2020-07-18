@@ -1,27 +1,26 @@
 import torch
-#from torchvision import transforms
 import cv2
 import numpy as np
 import types
 from numpy import random
 from math import sqrt
-import traceback
 import imageio
 
-from scipy.interpolate import NearestNDInterpolator
+from skimage import draw
 
 from data import cfg, MEANS, STD
 
-
-def in_box(pts, box):
-    pass
+def fill_boundary(shape, bpts):
+    t_or_f = draw.polygon2mask(shape, bpts[:,[1,0]])
+    mask = np.zeros_like(t_or_f, dtype=np.uint8)
+    mask[t_or_f] = 1
+    return mask
 
 def intersect(box_a, box_b):
     max_xy = np.minimum(box_a[:, 2:], box_b[2:])
     min_xy = np.maximum(box_a[:, :2], box_b[:2])
     inter = np.clip((max_xy - min_xy), a_min=0, a_max=np.inf)
     return inter[:, 0] * inter[:, 1]
-
 
 def jaccard_numpy(box_a, box_b):
     """Compute the jaccard overlap of two sets of boxes.  The jaccard overlap
@@ -450,6 +449,66 @@ class Expand(object):
 #        print('Doen with  Expand...')
         return image, masks, boxes, labels
 
+class Mover(object): 
+    #
+    #  I want to make some objects appear to have motion blur. For now, this 
+    #   augmentation will move all objects in view, but for many objects, this 
+    #   does not make sense; they do not actually ever move in practice. 
+    #  On the other hand, through the Hololens, when the operator turns their head, 
+    #   everything in the scene has some motion blur. 
+    #
+    #    WJP
+    
+    def __call__(self, image, masks, boxes, labels):
+        if random.randint(2):
+            return image, masks, boxes, labels
+        
+        #
+        # Motion is normally distributed with a std of 0.5 m/s. The FOV is about 
+        #   70 degrees wide, corresponding to 640 pixels. Camera is 0.8 m above 
+        #   bench, Hololens will be about 1 meter from objects. So within 20% 
+        #   or so we expect an std of 0.5 *320 * 0.9 *atan(35 deg)/30 per 
+        #   sec = 2.6 pixels. 
+        #
+        # So make the blur kernels have an std of 4. 
+        #
+        # In other words, 0.5 m/s corresponds to about 4 pixels per frame. 
+        #
+        h,w,d = image.shape
+
+        width = np.abs(np.round(random.normal(0,4))) # of blur kernel
+        ksize = 33  # 
+
+        ctr = ksize/2.0
+        w2 = width/2.0
+        x0 = ctr-w2; x1 = ctr+w2; y0 = ctr-1; y1 = ctr+1
+        tht = random.uniform(0,2*np.pi)
+        R = np.asarray([[np.cos(tht), -np.sin(tht)],[np.sin(tht), np.cos(tht)]])
+        origin = np.asarray([[ctr,ctr]])
+        bpts = (np.asarray([[x0,y0],[x1,y0],[x1,y1],[x0,y1]])-origin) @ R + origin 
+
+        kern = fill_boundary((ksize, ksize), bpts).astype(np.float64)
+        kern = cv2.blur(kern, (3,3))
+        kern = kern/np.sum(kern)
+
+        ddepth = -1 # keep same dtype. Nothing to do with channels. 
+
+#        print('Motion blur:', width/8, 'meters per second at',\
+#              int(tht*180/np.pi),'degrees')
+#        print('image data type is',image.dtype)
+        
+        for mask in masks:
+            mask = mask.reshape((h,w,1))
+            img_blur = cv2.filter2D(image*mask, ddepth , kern);
+            bmask = cv2.filter2D(mask.astype(np.float32), ddepth,\
+                                 kern.astype(np.float32)).reshape((h,w,1))
+    
+            image = img_blur*bmask + image*(1- bmask)
+            mask = bmask
+        
+        return image, masks, boxes, labels
+
+
 class Shrinker(object): 
     #  I want to zoom out some of our images so that objects appear smaller. 
     #    WJP
@@ -582,7 +641,8 @@ class Shrinker(object):
                 
                 all_good = True  # just do it once for now
             
-            ishrnk[ybord, xbord, :] = image[xy_fill[1,:].T, xy_fill[0,:].T,:].reshape(-1,3)
+            ishrnk[ybord, xbord, :] = image[xy_fill[1,:].T, \
+                   xy_fill[0,:].T,:].reshape(-1,3)
             
             b = boxes[imask]
             bv = np.asarray([[b[0], b[2]], [b[1], b[3]],[1, 1]])
@@ -631,11 +691,7 @@ class PhotoBomb(object):
         objects = image * masksum
         bkg = bkg * (1-masksum)
         non_icon_image = objects + bkg
-        
-#        print('image',np.min(image), np.max(image))
-#        print('bkg',np.min(bkg), np.max(bkg))
-#        print('non_icon_image',np.min(non_icon_image), np.max(non_icon_image))
-        
+                
         return non_icon_image, masks, boxes, labels
 
 
@@ -880,29 +936,15 @@ class SSDAugmentation(object):
             Resize(),
             Shrinker(),
             PhotoBomb(),
-            enable_if(not cfg.preserve_aspect_ratio, Pad(cfg.max_size, cfg.max_size, mean)),
+            Mover(),
+            enable_if(not cfg.preserve_aspect_ratio, \
+                      Pad(cfg.max_size, cfg.max_size, mean)),
             ToPercentCoords(),
             PrepareMasks(cfg.mask_size, cfg.use_gt_bboxes),
             BackboneTransform(cfg.backbone.transform, mean, std, 'BGR')
         ])
-#        print('...done with SSDAugmentation init.')
-# original code from the [] above. 
-#            ConvertFromInts(),
-#            ToAbsoluteCoords(),
-#            Shrinker(),
-#            enable_if(cfg.augment_photometric_distort, PhotometricDistort()),
-#            enable_if(cfg.augment_expand, Expand(mean)),
-#            enable_if(cfg.augment_random_sample_crop, RandomSampleCrop()),
-#            enable_if(cfg.augment_random_mirror, RandomMirror()),
-#            enable_if(cfg.augment_random_flip, RandomFlip()),
-#            enable_if(cfg.augment_random_flip, RandomRot90()),
-#            Resize(),
-#            enable_if(not cfg.preserve_aspect_ratio, Pad(cfg.max_size, cfg.max_size, mean)),
-#            ToPercentCoords(),
-#            PrepareMasks(cfg.mask_size, cfg.use_gt_bboxes),
-#            BackboneTransform(cfg.backbone.transform, mean, std, 'BGR')
 
     def __call__(self, img, masks, boxes, labels):
-#        print('Printing the traceback you wanted....')
-#        traceback.print_stack()
         return self.augment(img, masks, boxes, labels)
+    
+    
