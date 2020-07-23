@@ -6,9 +6,18 @@ from numpy import random
 from math import sqrt
 import imageio
 
+# Force same sequence of random numbers to be drawn by augmentations. If two 
+#  training processes are otherwise the same, i.e. same data coming in, then they 
+#   will see the same sequence of augmentations. 
+
+from numpy.random import MT19937
+from numpy.random import RandomState, SeedSequence
+rs = RandomState(MT19937(SeedSequence(123456789))) 
+ 
 from skimage import draw
 
 from data import cfg, MEANS, STD
+
 
 def fill_boundary(shape, bpts):
     t_or_f = draw.polygon2mask(shape, bpts[:,[1,0]])
@@ -193,8 +202,8 @@ class RandomSaturation(object):
         assert self.lower >= 0, "contrast lower must be non-negative."
 
     def __call__(self, image, masks=None, boxes=None, labels=None):
-        if random.randint(2):
-            image[:, :, 1] *= random.uniform(self.lower, self.upper)
+        if rs.randint(2):
+            image[:, :, 1] *= rs.uniform(self.lower, self.upper)
 
         return image, masks, boxes, labels
 
@@ -205,8 +214,8 @@ class RandomHue(object):
         self.delta = delta
 
     def __call__(self, image, masks=None, boxes=None, labels=None):
-        if random.randint(2):
-            image[:, :, 0] += random.uniform(-self.delta, self.delta)
+        if rs.randint(2):
+            image[:, :, 0] += rs.uniform(-self.delta, self.delta)
             image[:, :, 0][image[:, :, 0] > 360.0] -= 360.0
             image[:, :, 0][image[:, :, 0] < 0.0] += 360.0
         return image, masks, boxes, labels
@@ -254,8 +263,8 @@ class RandomContrast(object):
 
     # expects float image
     def __call__(self, image, masks=None, boxes=None, labels=None):
-        if random.randint(2):
-            alpha = random.uniform(self.lower, self.upper)
+        if rs.randint(2):
+            alpha = rs.uniform(self.lower, self.upper)
             image *= alpha
         return image, masks, boxes, labels
 
@@ -267,8 +276,8 @@ class RandomBrightness(object):
         self.delta = delta
 
     def __call__(self, image, masks=None, boxes=None, labels=None):
-        if random.randint(2):
-            delta = random.uniform(-self.delta, self.delta)
+        if rs.randint(2):
+            delta = rs.uniform(-self.delta, self.delta)
             image += delta
         return image, masks, boxes, labels
 
@@ -313,7 +322,7 @@ class RandomSampleCrop(object):
         height, width, _ = image.shape
         while True:
             # randomly choose a mode
-            mode = random.choice(self.sample_options)
+            mode = rs.choice(self.sample_options)
             if mode is None:
                 return image, masks, boxes, labels
 
@@ -327,15 +336,15 @@ class RandomSampleCrop(object):
             for _ in range(50):
                 current_image = image
 
-                w = random.uniform(0.3 * width, width)
-                h = random.uniform(0.3 * height, height)
+                w = rs.uniform(0.3 * width, width)
+                h = rs.uniform(0.3 * height, height)
 
                 # aspect ratio constraint b/t .5 & 2
                 if h / w < 0.5 or h / w > 2:
                     continue
 
-                left = random.uniform(width - w)
-                top = random.uniform(height - h)
+                left = rs.uniform(width - w)
+                top = rs.uniform(height - h)
 
                 # convert to integer rect x1,y1,x2,y2
                 rect = np.array([int(left), int(top), int(left+w), int(top+h)])
@@ -419,13 +428,13 @@ class Expand(object):
     def __call__(self, image, masks, boxes, labels):
 #        print('Entering Expand...')
 
-        if random.randint(2):
+        if rs.randint(2):
             return image, masks, boxes, labels
 
         height, width, depth = image.shape
-        ratio = random.uniform(1, 4)
-        left = random.uniform(0, width*ratio - width)
-        top = random.uniform(0, height*ratio - height)
+        ratio = rs.uniform(1, 4)
+        left = rs.uniform(0, width*ratio - width)
+        top = rs.uniform(0, height*ratio - height)
 
         expand_image = np.zeros(
             (int(height*ratio), int(width*ratio), depth),
@@ -460,7 +469,7 @@ class Mover(object):
     #    WJP
     
     def __call__(self, image, masks, boxes, labels):
-        if random.randint(2):
+        if rs.randint(2):
             return image, masks, boxes, labels
         
         #
@@ -476,13 +485,13 @@ class Mover(object):
         #
         h,w,d = image.shape
 
-        width = np.abs(np.round(random.normal(0,4))) # of blur kernel
+        width = np.abs(np.round(rs.normal(0,4))) # of blur kernel
         ksize = 33  # 
 
         ctr = ksize/2.0
         w2 = width/2.0
         x0 = ctr-w2; x1 = ctr+w2; y0 = ctr-1; y1 = ctr+1
-        tht = random.uniform(0,2*np.pi)
+        tht = rs.uniform(0,2*np.pi)
         R = np.asarray([[np.cos(tht), -np.sin(tht)],[np.sin(tht), np.cos(tht)]])
         origin = np.asarray([[ctr,ctr]])
         bpts = (np.asarray([[x0,y0],[x1,y0],[x1,y1],[x0,y1]])-origin) @ R + origin 
@@ -508,6 +517,64 @@ class Mover(object):
         
         return image, masks, boxes, labels
 
+class CameraShaker(object): 
+    #
+    #  I want to make some objects appear to have motion blur. For now, this 
+    #   augmentation will move all objects in view, but for many objects, this 
+    #   does not make sense; they do not actually ever move in practice. 
+    #  On the other hand, through the Hololens, when the operator turns their head, 
+    #   everything in the scene has some motion blur. 
+    #
+    #    WJP
+    
+    def __call__(self, image, masks, boxes, labels):
+        if rs.randint(2):
+            return image, masks, boxes, labels
+        
+        #
+        # Typical camera motion is ?????. NEED TO MODEL OR MEASURE TYPICAL TECHNICIAN 
+        #   HEAD MOTIONS
+        #   The FOV is about 
+        #   70 degrees wide, corresponding to 640 pixels. Camera is 0.8 m above 
+        #   bench, Hololens will be about 1 meter from objects. So within 20% 
+        #   or so we expect an std of 0.5 *320 * 0.9 *atan(35 deg)/30 per 
+        #   sec = 2.6 pixels. 
+        #
+        # So make the blur kernels have an std of 4. 
+        #
+        # In other words, 0.5 m/s corresponds to about 4 pixels per frame. 
+        #
+        h,w,d = image.shape
+
+        width = np.abs(np.round(rs.normal(0,4))) # of blur kernel
+        ksize = 33  # 
+
+        ctr = ksize/2.0
+        w2 = width/2.0
+        x0 = ctr-w2; x1 = ctr+w2; y0 = ctr-1; y1 = ctr+1
+        tht = rs.uniform(0,2*np.pi)
+        R = np.asarray([[np.cos(tht), -np.sin(tht)],[np.sin(tht), np.cos(tht)]])
+        origin = np.asarray([[ctr,ctr]])
+        bpts = (np.asarray([[x0,y0],[x1,y0],[x1,y1],[x0,y1]])-origin) @ R + origin 
+
+        kern = fill_boundary((ksize, ksize), bpts).astype(np.float64)
+        kern = cv2.blur(kern, (3,3))
+        kern = kern/np.sum(kern)
+
+        ddepth = -1 # keep same dtype. Nothing to do with channels. 
+
+#        print('Motion blur:', width/8, 'meters per second at',\
+#              int(tht*180/np.pi),'degrees')
+#        print('image data type is',image.dtype)
+        
+        image = cv2.filter2D(image, ddepth , kern);
+        for mask in masks:
+            mask = mask.reshape((h,w,1))
+            mask = cv2.filter2D(mask.astype(np.float32), ddepth,\
+                                kern.astype(np.float32)).reshape((h,w,1))    
+
+        return image, masks, boxes, labels
+
 
 class Shrinker(object): 
     #  I want to zoom out some of our images so that objects appear smaller. 
@@ -515,10 +582,10 @@ class Shrinker(object):
         
     def __call__(self, image, masks, boxes, labels):
 #        if random.randint(2)<0:
-        if random.randint(2):
+        if rs.randint(2):
             return image, masks, boxes, labels
         
-        ratio = random.uniform(0.33,0.9)
+        ratio = rs.uniform(0.33,0.9)
 
         masksum = np.zeros(masks.shape[1:])
         ioverlap = []
@@ -537,7 +604,7 @@ class Shrinker(object):
             for io in ioverlap:
                 for j in range(io):
                     if use_mask[j] and use_mask[io]:
-                        if random.randint(2):
+                        if rs.randint(2):
                             use_mask[io] = False
                         else:
                             use_mask[j] = False
@@ -675,11 +742,11 @@ class PhotoBomb(object):
         self.imgfiles = glob.glob(non_iconic_path+'*.jpg')
         self.once_every = 8 # On average, this is invoked once every once_every images.
 
-    def __call__(self, image, masks, boxes, labels):
-        if random.randint(self.once_every):
+    def __call__(self, image, masks, boxes, labels):       
+        if rs.randint(self.once_every):
             return image, masks, boxes, labels
          
-        bkgfile = self.imgfiles[np.random.randint(0,len(self.imgfiles))]
+        bkgfile = self.imgfiles[rs.randint(0,len(self.imgfiles))]
         bkg = cv2.cvtColor(imageio.imread(bkgfile), cv2.COLOR_RGB2BGR)
         
         mshape = masks[0].shape
@@ -699,7 +766,7 @@ class RandomMirror(object):
     def __call__(self, image, masks, boxes, labels):
 #        print('Entering RandomMirror...')
         _, width, _ = image.shape
-        if random.randint(2):
+        if rs.randint(2):
             image = image[:, ::-1]
             masks = masks[:, :, ::-1]
             boxes = boxes.copy()
@@ -712,7 +779,7 @@ class RandomMirror(object):
 class RandomFlip(object):
     def __call__(self, image, masks, boxes, labels):
         height , _ , _ = image.shape
-        if random.randint(2):
+        if rs.randint(2):
             image = image[::-1, :]
             masks = masks[:, ::-1, :]
             boxes = boxes.copy()
@@ -723,7 +790,7 @@ class RandomFlip(object):
 class RandomRot90(object):
     def __call__(self, image, masks, boxes, labels):
         old_height , old_width , _ = image.shape
-        k = random.randint(4)
+        k = rs.randint(4)
         image = np.rot90(image,k)
         masks = np.array([np.rot90(mask,k) for mask in masks])
         boxes = boxes.copy()
@@ -775,7 +842,7 @@ class PhotometricDistort(object):
     def __call__(self, image, masks, boxes, labels):
         im = image.copy()
         im, masks, boxes, labels = self.rand_brightness(im, masks, boxes, labels)
-        if random.randint(2):
+        if rs.randint(2):
             distort = Compose(self.pd[:-1])
         else:
             distort = Compose(self.pd[1:])
@@ -925,7 +992,6 @@ class SSDAugmentation(object):
     """ Transform to be used when training. """
 
     def __init__(self, mean=MEANS, std=STD):
-#        print('In SSDAugmentation init...')
         self.augment = Compose([
             ConvertFromInts(),
             ToAbsoluteCoords(),
@@ -937,6 +1003,7 @@ class SSDAugmentation(object):
             Shrinker(),
             PhotoBomb(),
             Mover(),
+            CameraShaker(),
             enable_if(not cfg.preserve_aspect_ratio, \
                       Pad(cfg.max_size, cfg.max_size, mean)),
             ToPercentCoords(),
