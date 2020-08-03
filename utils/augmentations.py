@@ -18,7 +18,6 @@ from skimage import draw
 
 from data import cfg, MEANS, STD
 
-
 def fill_boundary(shape, bpts):
     t_or_f = draw.polygon2mask(shape, bpts[:,[1,0]])
     mask = np.zeros_like(t_or_f, dtype=np.uint8)
@@ -485,7 +484,7 @@ class Mover(object):
         #
         h,w,d = image.shape
 
-        width = np.abs(np.round(rs.normal(0,4))) # of blur kernel
+        width = np.abs(np.round(rs.normal(0,4))) + 1 # of blur kernel
         ksize = 33  # 
 
         ctr = ksize/2.0
@@ -494,17 +493,15 @@ class Mover(object):
         tht = rs.uniform(0,2*np.pi)
         R = np.asarray([[np.cos(tht), -np.sin(tht)],[np.sin(tht), np.cos(tht)]])
         origin = np.asarray([[ctr,ctr]])
-        bpts = (np.asarray([[x0,y0],[x1,y0],[x1,y1],[x0,y1]])-origin) @ R + origin 
+        bpts = (np.asarray([[x0,y0],[x1,y0],[x1,y1],[x0,y1]])-origin) @ R \
+                    + origin 
 
         kern = fill_boundary((ksize, ksize), bpts).astype(np.float64)
         kern = cv2.blur(kern, (3,3))
         kern = kern/np.sum(kern)
-
+            
+        
         ddepth = -1 # keep same dtype. Nothing to do with channels. 
-
-#        print('Motion blur:', width/8, 'meters per second at',\
-#              int(tht*180/np.pi),'degrees')
-#        print('image data type is',image.dtype)
         
         for mask in masks:
             mask = mask.reshape((h,w,1))
@@ -546,7 +543,7 @@ class CameraShaker(object):
         #
         h,w,d = image.shape
 
-        width = np.abs(np.round(rs.normal(0,4))) # of blur kernel
+        width = np.abs(np.round(rs.normal(0,4))) + 1 # of blur kernel
         ksize = 33  # 
 
         ctr = ksize/2.0
