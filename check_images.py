@@ -99,9 +99,8 @@ class ImageChecker(tk.Frame):
         top = tk.Toplevel(self.root)
         top.withdraw()  # ...in secret....
 
-        infile = \
-            filedialog.askopenfilename(parent=top, \
-                                        title='Choose JSON file')
+        infile = D.my_custom_dataset.train_info
+
 
 #        infile = 'C:/Users/peria/Desktop/work/Brent Lab/git-repo/yolact/' + \
 #        'data/coco/annotations/milliCOCO.json'

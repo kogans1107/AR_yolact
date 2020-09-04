@@ -998,7 +998,6 @@ class SSDAugmentation(object):
             RandomRot90(),
             Resize(),
             Shrinker(),
-            PhotoBomb(),
             Mover(),
             CameraShaker(),
             enable_if(not cfg.preserve_aspect_ratio, \
@@ -1010,5 +1009,5 @@ class SSDAugmentation(object):
 
     def __call__(self, img, masks, boxes, labels):
         return self.augment(img, masks, boxes, labels)
-    
+
     
