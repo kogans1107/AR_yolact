@@ -42,11 +42,13 @@ classes = [c.classname for c in ap_data['mask'][0]]
 #     number.append(num)
 #
 #  pretend I have a list of strings for classes
-obj_dict = {'classes' : []}
+obj_dict = {'classes' : {'mask':[],'box':[]}}
 for num,c in enumerate(classes):
-    obj_dict['classes'].append({'name': c,'id': num, 'mask':[],'box':[] ,'true_positives': []})
+    obj_dict['classes']['mask'].append({'name': c,'id': num, 'percision': [] ,'true_positives': []})
+    obj_dict['classes']['box'].append({'name': c,'id': num, 'percision': [] , 'true_positives': []})
 
-class_dict = obj_dict['classes']
+mask_dict = obj_dict['classes']['mask']
+box_dict = obj_dict['classes']['box']
 
 #epoch_number = ???? # np.linspace(0,number of files?)
 # epoch_number = []
@@ -59,7 +61,8 @@ for i in range(len(ap_data_files)):
         with open(ap_data_files[i],'rb') as f:
             ap_data = pickle.load(f)
         for j in range(len(obj_dict['classes'])):
-            obj_dict['classes'][j]['true_positives'].append(ap_data['mask'][0][j].num_gt_positives)
+            mask_dict[j]['true_positives'].append(ap_data['mask'][0][j].num_gt_positives)
+            box_dict[j]['true_positives'].append(ap_data['box'][0][j].num_gt_positives)
     except Exception as e:
         print(ap_data_files[i])
         continue
