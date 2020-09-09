@@ -998,9 +998,6 @@ class SSDAugmentation(object):
             RandomRot90(),
             Resize(),
             Shrinker(),
-            PhotoBomb(),
-            Mover(),
-            CameraShaker(),
             enable_if(not cfg.preserve_aspect_ratio, \
                       Pad(cfg.max_size, cfg.max_size, mean)),
             ToPercentCoords(),
