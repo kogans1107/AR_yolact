@@ -155,7 +155,7 @@ if __name__ == "__main__":
     
     for i in range(len(classes)):
         fig,axs = plt.subplots(2,2)
-        fig.suptitle(mask_dict[i]['name'],y=0.05)
+        fig.suptitle(mask_dict[i]['name'])
         
         axs[0,0].set_title('Mask Precision')
         axs[0,1].set_title('Box Precision')
@@ -163,7 +163,9 @@ if __name__ == "__main__":
         axs[1,1].set_title('Box True Positivies')
         
         axs[0,0].set_ylabel('Precision Value')
+        axs[0,0].set_ylim(0,1)
         axs[0,1].set_ylabel('Precision Value')
+        axs[0,1].set_ylim(0,1)
         axs[1,0].set_ylabel('Number of GT Positives')
         axs[1,1].set_ylabel('Number of GT Positives')
         
