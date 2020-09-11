@@ -70,9 +70,9 @@ def get_tp(df):
 
 if __name__ == "__main__":
     
-    
+    print('choose a dataset to evaluate')
     dir_to_process = uichoosedir()
-    print('Loading files')
+    print('Loading files...')
     ap_data_files = sorted(glob.glob(dir_to_process + '/'+ 'ap_data*'))
     print('loaded ', len(ap_data_files), 'files')
     with open(ap_data_files[0],'rb') as f:
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     
     # for num, fname in enumerate(ap_data_files):
     #     epoch_number.append(num)
-        
+    print('Reading files...')    
     for i in range(len(ap_data_files)):
         try:
             with open(ap_data_files[i],'rb') as f:
@@ -111,7 +111,7 @@ if __name__ == "__main__":
         except Exception as e:
             print(ap_data_files[i])
             continue
-            
+    print('done')
             
         
         
@@ -133,7 +133,7 @@ if __name__ == "__main__":
     
     pdf_files = pdf.PdfPages('results/data_analysis/output.pdf')
     
-
+    print('graphing data...')
     
     # fig,axs = plt.subplots(2,2)
     # axs[0,0].set_title('Mask Precision')
@@ -181,7 +181,7 @@ if __name__ == "__main__":
         axs[1][1].plot(box_dict[i]['true_positives'])
         
         fig.tight_layout()
-        pdf_files.savefig(fig)
+        pdf_files.savefig(fig.png)
         plt.close()
         
         
@@ -212,6 +212,7 @@ if __name__ == "__main__":
     
     pdf_files.savefig(fig)
     pdf_files.close()
+    print('saved data to', pdf_files)    
     # plist=[]
     # for i in range(len(classes)):
     #     plot_num = (i % 4)+1
