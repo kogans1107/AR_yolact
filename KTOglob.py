@@ -181,7 +181,7 @@ if __name__ == "__main__":
         axs[1][1].plot(box_dict[i]['true_positives'])
         
         fig.tight_layout()
-        pdf_files.savefig(fig.png)
+        pdf_files.savefig(fig)
         plt.close()
         
         
