@@ -162,8 +162,8 @@ if __name__ == "__main__":
         
         fig.tight_layout()
 
-        pdf_files.savefig(fig)
-        plt.close()
+#        pdf_files.savefig(fig)
+#        plt.close()
 
         pdf_files.savefig()
         
