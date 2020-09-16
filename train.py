@@ -20,8 +20,7 @@ import torch.utils.data as data
 import numpy as np
 import argparse
 import datetime
-
-# Oof
+import data as D
 import eval as eval_script
 
 def str2bool(v):
@@ -367,8 +366,9 @@ def train():
                             os.remove(latest)
             
             # This is done per epoch
+            print('Taking Validation at Zero')
             if args.validation_epoch > 0:
-                if epoch % args.validation_epoch == 0 and epoch > 0:
+                if epoch % args.validation_epoch == 0: #and #epoch > 0:
                     compute_validation_map(epoch, iteration, yolact_net, val_dataset, log if args.log else None)
         
         # Compute validation mAP after training is finished
@@ -498,11 +498,11 @@ def compute_validation_map(epoch, iteration, yolact_net, dataset, log:Log=None):
     
     with torch.no_grad():
         yolact_net.eval()
-        
+        train_set = Path(D.my_custom_dataset.train_info).stem
         start = time.time()
         print()
         print("Computing validation mAP (this may take a while)...", flush=True)
-        ap_filename = 'ap_data/ap_data_' + str(epoch) + '_' + str(iteration) + '_' + date_for_filename()
+        ap_filename = 'ap_data/' + str(epoch) + '_' + str(iteration) + '_' + date_for_filename() + '_' +  train_set 
         val_info = eval_script.evaluate(yolact_net, dataset, train_mode=True, per_obj_data= ap_filename)
         end = time.time()
 

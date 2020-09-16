@@ -136,7 +136,7 @@ if __name__ == "__main__":
     print('graphing data...')
 
  #   for i in range(len(classes)):
-    for i in range(2):
+    for i in range(len(classes)):
         fig,axs = plt.subplots(1,1)
                
         axs.set_ylabel('Precision')
@@ -148,8 +148,10 @@ if __name__ == "__main__":
         line2 = axs.plot(box_dict[i]['precision'],label='box')
         legend = axs.legend(loc='upper left', shadow=True, fontsize='x-large')
         
+
         mtp = mask_dict[i]['true_positives']
         mdenom = np.max(mtp)
+
         
         btp = box_dict[i]['true_positives']
         bdenom = np.max(btp)
@@ -167,7 +169,12 @@ if __name__ == "__main__":
 
         pdf_files.savefig()
         
-
+        axs[0,0].set_ylabel('Precision Value')
+        axs[0,0].set_ylim(0,1)
+        axs[0,1].set_ylabel('Precision Value')
+        axs[0,1].set_ylim(0,1)
+        axs[1,0].set_ylabel('Number of GT Postives')
+        axs[1,1].set_ylabel('Number of GT Positives')
         
         
     # fig_all,axs_all = plt.subplots(2,2)
