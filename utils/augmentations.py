@@ -998,3 +998,16 @@ class SSDAugmentation(object):
             RandomRot90(),
             Resize(),
             Shrinker(),
+            Mover(),
+            CameraShaker(),
+            enable_if(not cfg.preserve_aspect_ratio, \
+                      Pad(cfg.max_size, cfg.max_size, mean)),
+            ToPercentCoords(),
+            PrepareMasks(cfg.mask_size, cfg.use_gt_bboxes),
+            BackboneTransform(cfg.backbone.transform, mean, std, 'BGR')
+        ])
+
+    def __call__(self, img, masks, boxes, labels):
+        return self.augment(img, masks, boxes, labels)
+
+    
