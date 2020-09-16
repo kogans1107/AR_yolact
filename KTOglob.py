@@ -166,7 +166,7 @@ if __name__ == "__main__":
         axs[0,0].set_ylim(0,1)
         axs[0,1].set_ylabel('Precision Value')
         axs[0,1].set_ylim(0,1)
-        axs[1,0].set_ylabel('Number of GT Positives')
+        axs[1,0].set_ylabel('Number of GT Postives')
         axs[1,1].set_ylabel('Number of GT Positives')
         
         axs[0,0].set_xlabel('pkl file number')
