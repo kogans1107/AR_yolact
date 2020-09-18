@@ -66,14 +66,21 @@ def get_tp(df):
         # # print(len(box_auc))
         # for j in range(len(classes)):
              
-
+def get_function(df):
+      for i in range(len(classes)):
+        mask_dict[i]['true_positives'].append(df['mask'][0][i].num_gt_positives)
+        box_dict[i]['true_positives'].append(df['box'][0][i].num_gt_positives)
+        for j in range(10):
+           mask_dict[i]['precision'].append(df['mask'][j][i])
+           box_dict[i]['precision'].append(df['box'][j][i])
 
 if __name__ == "__main__":
     
     print('choose a dataset to evaluate')
     dir_to_process = uichoosedir()
     print('Loading files...')
-    ap_data_files = sorted(glob.glob(dir_to_process + '/'+ 'ap_data*'))
+    ap_data_input = sorted(glob.glob(dir_to_process + '/'+ 'ap_data*'))
+    ap_data_files = sorted(ap_data_input, key=lambda x: int("".join([i for i in x if i.isdigit()])))
     print('loaded ', len(ap_data_files), 'files')
     with open(ap_data_files[0],'rb') as f:
         ap_data = pickle.load(f)
@@ -108,6 +115,7 @@ if __name__ == "__main__":
             with open(ap_data_files[i],'rb') as f:
                 ap_data = pickle.load(f)
                 get_tp(ap_data)
+                # get_function(ap_data)
         except Exception as e:
             print(ap_data_files[i])
             continue
@@ -168,18 +176,19 @@ if __name__ == "__main__":
 #        plt.close()
 
         pdf_files.savefig()
+        plt.close()
         
-        axs[0,0].set_ylabel('Precision Value')
-        axs[0,0].set_ylim(0,1)
-        axs[0,1].set_ylabel('Precision Value')
-        axs[0,1].set_ylim(0,1)
-        axs[1,0].set_ylabel('Number of GT Postives')
-        axs[1,1].set_ylabel('Number of GT Positives')
+    #     axs[0,0].set_ylabel('Precision Value')
+    #     axs[0,0].set_ylim(0,1)
+    #     axs[0,1].set_ylabel('Precision Value')
+    #     axs[0,1].set_ylim(0,1)
+    #     axs[1,0].set_ylabel('Number of GT Postives')
+    #     axs[1,1].set_ylabel('Number of GT Positives')
         
         
-    # fig_all,axs_all = plt.subplots(2,2)
+    # # fig_all,axs_all = plt.subplots(2,2)
     
-    fig.suptitle('All Classes')
+    # fig.suptitle('All Classes')
     # axs_all[0,0].set_title('Mask Precision')
     # axs_all[0,1].set_title('Box Precision')
     # axs_all[1,0].set_title('Mask True Positives')
@@ -206,6 +215,12 @@ if __name__ == "__main__":
     pdf_files.close()
     print('saved data to', pdf_files)    
 
+# file_output = []
+# class_1_data = []
 
-
-
+# for i in range(len(ap_data_files)):
+#     with open(ap_data_files[i],'rb') as f:
+#         file_output.append(ap_data_files[i])
+#         ap_data = pickle.load(f)
+#         for i in range(10):
+#             class_1_data.append(ap_data['mask'][i][0].get_ap())
